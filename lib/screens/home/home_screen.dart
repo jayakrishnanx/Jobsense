@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../data/app_state.dart';
 import '../../widgets/job_card.dart';
@@ -102,38 +103,75 @@ class HomeDashboard extends StatefulWidget {
 }
 
 class _HomeDashboardState extends State<HomeDashboard> {
-  final ScrollController _eligibleScrollController = ScrollController();
-  final ScrollController _recentScrollController = ScrollController();
+  final PageController _eligiblePageController =
+      PageController(viewportFraction: 0.88);
+  final PageController _recentPageController =
+      PageController(viewportFraction: 0.88);
+  Timer? _autoScrollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startAutoScroll();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_autoScrollTimer == null || !_autoScrollTimer!.isActive) {
+      _startAutoScroll();
+    }
+  }
+
+  void _startAutoScroll() {
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      final eligibleCount = appState.eligibleJobs.length;
+      final recentCount = appState.jobs.length;
+      _autoScrollNext(_eligiblePageController, eligibleCount);
+      _autoScrollNext(_recentPageController, recentCount);
+    });
+  }
+
+  void _autoScrollNext(PageController controller, int itemCount) {
+    if (!controller.hasClients || itemCount <= 1 || !mounted) return;
+    final currentPage = controller.page?.round() ?? controller.initialPage;
+    final nextPage = (currentPage + 1) % itemCount;
+    controller.animateToPage(
+      nextPage,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
+  void _pageNext(PageController controller, int itemCount) {
+    if (!controller.hasClients || itemCount <= 1) return;
+    final currentPage = controller.page?.round() ?? controller.initialPage;
+    final nextPage = (currentPage + 1) % itemCount;
+    controller.animateToPage(
+      nextPage,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _pagePrev(PageController controller, int itemCount) {
+    if (!controller.hasClients || itemCount <= 1) return;
+    final currentPage = controller.page?.round() ?? controller.initialPage;
+    final prevPage = (currentPage - 1 + itemCount) % itemCount;
+    controller.animateToPage(
+      prevPage,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
+  }
 
   @override
   void dispose() {
-    _eligibleScrollController.dispose();
-    _recentScrollController.dispose();
+    _autoScrollTimer?.cancel();
+    _eligiblePageController.dispose();
+    _recentPageController.dispose();
     super.dispose();
-  }
-
-  void _scrollRight(ScrollController controller) {
-    if (controller.hasClients) {
-      final target = (controller.offset + 324)
-          .clamp(0.0, controller.position.maxScrollExtent);
-      controller.animateTo(
-        target,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-      );
-    }
-  }
-
-  void _scrollLeft(ScrollController controller) {
-    if (controller.hasClients) {
-      final target = (controller.offset - 324)
-          .clamp(0.0, controller.position.maxScrollExtent);
-      controller.animateTo(
-        target,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-      );
-    }
   }
 
   @override
@@ -285,27 +323,29 @@ class _HomeDashboardState extends State<HomeDashboard> {
               // SECTION: Eligible Jobs Preview (Horizontal with Arrow Navigation)
               Row(
                 children: [
-                  const Text(
-                    'Eligible Job Alerts',
-                    style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.bold,
+                  const Expanded(
+                    child: Text(
+                      'Eligible Job Alerts',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Spacer(),
                   // Scroll Left
                   IconButton(
                     icon: const Icon(Icons.chevron_left, size: 22),
                     visualDensity: VisualDensity.compact,
                     tooltip: 'Scroll left',
-                    onPressed: () => _scrollLeft(_eligibleScrollController),
+                    onPressed: () => _pagePrev(_eligiblePageController, eligibleJobs.length),
                   ),
                   // Scroll Right
                   IconButton(
                     icon: const Icon(Icons.chevron_right, size: 22),
                     visualDensity: VisualDensity.compact,
                     tooltip: 'Scroll right',
-                    onPressed: () => _scrollRight(_eligibleScrollController),
+                    onPressed: () => _pageNext(_eligiblePageController, eligibleJobs.length),
                   ),
                   TextButton(
                     onPressed: widget.onViewAllJobs,
@@ -316,28 +356,37 @@ class _HomeDashboardState extends State<HomeDashboard> {
               const SizedBox(height: 8),
               SizedBox(
                 height: 240,
-                child: ListView.builder(
-                  controller: _eligibleScrollController,
-                  physics: const BouncingScrollPhysics(),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: eligibleJobs.length,
-                  itemBuilder: (context, index) {
-                    final job = eligibleJobs[index];
-                    return JobCard(
-                      width: 310,
-                      margin: const EdgeInsets.only(right: 14),
-                      job: job,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => JobDetailsScreen(job: job),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
+                child: eligibleJobs.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No eligible jobs found for your profile',
+                          style: TextStyle(fontSize: 13, color: Colors.grey),
+                        ),
+                      )
+                    : PageView.builder(
+                        controller: _eligiblePageController,
+                        padEnds: false,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: eligibleJobs.length,
+                        itemBuilder: (context, index) {
+                          final job = eligibleJobs[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: JobCard(
+                              margin: EdgeInsets.zero,
+                              job: job,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => JobDetailsScreen(job: job),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
               ),
 
               const SizedBox(height: 16),
@@ -345,27 +394,29 @@ class _HomeDashboardState extends State<HomeDashboard> {
               // SECTION: All Recent Opportunities (Horizontal with Arrow Navigation)
               Row(
                 children: [
-                  const Text(
-                    'Recently Added Opportunities',
-                    style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.bold,
+                  const Expanded(
+                    child: Text(
+                      'Recently Added Opportunities',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Spacer(),
                   // Scroll Left
                   IconButton(
                     icon: const Icon(Icons.chevron_left, size: 22),
                     visualDensity: VisualDensity.compact,
                     tooltip: 'Scroll left',
-                    onPressed: () => _scrollLeft(_recentScrollController),
+                    onPressed: () => _pagePrev(_recentPageController, appState.jobs.length),
                   ),
                   // Scroll Right
                   IconButton(
                     icon: const Icon(Icons.chevron_right, size: 22),
                     visualDensity: VisualDensity.compact,
                     tooltip: 'Scroll right',
-                    onPressed: () => _scrollRight(_recentScrollController),
+                    onPressed: () => _pageNext(_recentPageController, appState.jobs.length),
                   ),
                   TextButton(
                     onPressed: widget.onViewAllJobs,
@@ -377,25 +428,27 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
               SizedBox(
                 height: 240,
-                child: ListView.builder(
-                  controller: _recentScrollController,
+                child: PageView.builder(
+                  controller: _recentPageController,
+                  padEnds: false,
                   physics: const BouncingScrollPhysics(),
-                  scrollDirection: Axis.horizontal,
                   itemCount: appState.jobs.length,
                   itemBuilder: (context, index) {
                     final job = appState.jobs.reversed.toList()[index];
-                    return JobCard(
-                      width: 310,
-                      margin: const EdgeInsets.only(right: 14),
-                      job: job,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => JobDetailsScreen(job: job),
-                          ),
-                        );
-                      },
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: JobCard(
+                        margin: EdgeInsets.zero,
+                        job: job,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => JobDetailsScreen(job: job),
+                            ),
+                          );
+                        },
+                      ),
                     );
                   },
                 ),

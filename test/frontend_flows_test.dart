@@ -2,6 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jobsense/app/app.dart';
 import 'package:jobsense/data/app_state.dart';
 import 'package:jobsense/models/user.dart';
+import 'package:jobsense/models/managed_user.dart';
+import 'package:jobsense/models/scraped_job.dart';
+import 'package:jobsense/models/scraper.dart';
 
 void main() {
   setUp(() {
@@ -128,6 +131,91 @@ void main() {
 
       appState.logout();
       expect(appState.currentUser, isNull);
+      expect(appState.currentRole, AuthRole.none);
+    });
+
+    // TEST 13: Admin username login
+    test('TEST 13: Admin username login flow with admin / admin123', () {
+      final role = appState.loginWithUsername('admin', 'admin123');
+      expect(role, AuthRole.admin);
+      expect(appState.currentRole, AuthRole.admin);
+      expect(appState.currentAdmin, isNotNull);
+      expect(appState.currentAdmin?.username, 'admin');
+    });
+
+    // TEST 14: User username login
+    test('TEST 14: User username login flow with rahul / rahul123', () {
+      final role = appState.loginWithUsername('rahul', 'rahul123');
+      expect(role, AuthRole.user);
+      expect(appState.currentRole, AuthRole.user);
+      expect(appState.currentUser, isNotNull);
+      expect(appState.currentUser?.name, 'Rahul Sharma');
+    });
+
+    // TEST 15: Invalid username credentials
+    test('TEST 15: Invalid credentials return AuthRole.none', () {
+      final role = appState.loginWithUsername('invalidUser', 'wrongPass');
+      expect(role, AuthRole.none);
+      expect(appState.currentRole, AuthRole.none);
+    });
+
+    // TEST 16: Admin mobile OTP login
+    test('TEST 16: Admin phone login flow with 9999999999', () {
+      final isExisting = appState.loginWithPhone('9999999999');
+      expect(isExisting, isTrue);
+      expect(appState.currentRole, AuthRole.admin);
+      expect(appState.currentAdmin, isNotNull);
+    });
+
+    // TEST 17: Scraper management - toggle and execute
+    test('TEST 17: Scraper management toggle and manual execution', () async {
+      final initialStatus = appState.scrapers.first.status;
+      appState.toggleScraperStatus(appState.scrapers.first.id);
+      expect(appState.scrapers.first.status != initialStatus, isTrue);
+
+      final initialJobsCollected = appState.scrapers.first.jobsCollected;
+      await appState.runScraper(appState.scrapers.first.id);
+      expect(appState.scrapers.first.jobsCollected, greaterThan(initialJobsCollected));
+      expect(appState.scrapers.first.status, ScraperStatus.active);
+    });
+
+    // TEST 18: Scraped job approval
+    test('TEST 18: Scraped job approval publishes to active jobs', () {
+      final pendingJob = appState.scrapedJobs.firstWhere(
+        (j) => j.reviewStatus == ScrapedJobReviewStatus.pending,
+      );
+      final initialJobCount = appState.jobs.length;
+
+      appState.approveScrapedJob(pendingJob.id);
+
+      final updatedJob = appState.scrapedJobs.firstWhere((j) => j.id == pendingJob.id);
+      expect(updatedJob.reviewStatus, ScrapedJobReviewStatus.approved);
+      expect(appState.jobs.length, initialJobCount + 1);
+    });
+
+    // TEST 19: Scraped job rejection
+    test('TEST 19: Scraped job rejection with reason', () {
+      final pendingJob = appState.scrapedJobs.firstWhere(
+        (j) => j.reviewStatus == ScrapedJobReviewStatus.pending,
+      );
+
+      appState.rejectScrapedJob(pendingJob.id, 'Duplicate notice');
+
+      final updatedJob = appState.scrapedJobs.firstWhere((j) => j.id == pendingJob.id);
+      expect(updatedJob.reviewStatus, ScrapedJobReviewStatus.rejected);
+      expect(updatedJob.rejectionReason, 'Duplicate notice');
+    });
+
+    // TEST 20: User block and unblock
+    test('TEST 20: Candidate suspension toggle', () {
+      final user = appState.managedUsers.first;
+      expect(user.status, UserAccountStatus.active);
+
+      appState.toggleUserBlock(user.id, 'Test suspension');
+      expect(appState.managedUsers.first.status, UserAccountStatus.blocked);
+
+      appState.toggleUserBlock(user.id);
+      expect(appState.managedUsers.first.status, UserAccountStatus.active);
     });
   });
 }
