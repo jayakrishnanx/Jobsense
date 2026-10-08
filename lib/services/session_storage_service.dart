@@ -6,9 +6,7 @@ class SessionStorageService {
   SessionStorageService._internal();
 
   static const String _keyAuthToken = 'js_auth_token';
-  static const String _keyAuthRole = 'js_auth_role';
   static const String _keyUserData = 'js_user_data';
-  static const String _keyAdminData = 'js_admin_data';
   static const String _keyLastIdentifier = 'js_last_identifier';
   static const String _keySavedJobIds = 'js_saved_job_ids';
   static const String _keyThemeMode = 'js_theme_dark_mode';
@@ -16,25 +14,16 @@ class SessionStorageService {
   /// Saves active authentication session securely to persistent storage
   Future<void> saveSession({
     required String token,
-    required String role,
     Map<String, dynamic>? userData,
-    Map<String, dynamic>? adminData,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_keyAuthToken, token);
-      await prefs.setString(_keyAuthRole, role);
 
       if (userData != null) {
         await prefs.setString(_keyUserData, jsonEncode(userData));
       } else {
         await prefs.remove(_keyUserData);
-      }
-
-      if (adminData != null) {
-        await prefs.setString(_keyAdminData, jsonEncode(adminData));
-      } else {
-        await prefs.remove(_keyAdminData);
       }
     } catch (_) {}
   }
@@ -44,9 +33,8 @@ class SessionStorageService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString(_keyAuthToken);
-      final role = prefs.getString(_keyAuthRole);
 
-      if (token == null || token.isEmpty || role == null || role.isEmpty) {
+      if (token == null || token.isEmpty) {
         return null;
       }
 
@@ -58,19 +46,9 @@ class SessionStorageService {
         } catch (_) {}
       }
 
-      Map<String, dynamic>? adminData;
-      final adminJson = prefs.getString(_keyAdminData);
-      if (adminJson != null && adminJson.isNotEmpty) {
-        try {
-          adminData = jsonDecode(adminJson) as Map<String, dynamic>?;
-        } catch (_) {}
-      }
-
       return {
         'token': token,
-        'role': role,
         'userData': userData,
-        'adminData': adminData,
       };
     } catch (_) {
       return null;
@@ -90,9 +68,7 @@ class SessionStorageService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_keyAuthToken);
-      await prefs.remove(_keyAuthRole);
       await prefs.remove(_keyUserData);
-      await prefs.remove(_keyAdminData);
     } catch (_) {}
   }
 

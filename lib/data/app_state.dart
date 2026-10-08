@@ -1,20 +1,14 @@
 import 'package:flutter/material.dart';
-import '../models/admin_user.dart';
 import '../models/job.dart';
-import '../models/managed_user.dart';
 import '../models/notification.dart';
-import '../models/scraped_job.dart';
-import '../models/scraper.dart';
-import '../models/system_log.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../services/session_storage_service.dart';
 
-enum AuthRole { none, user, admin }
+enum AuthRole { none, user }
 
 class AppState extends ChangeNotifier {
   User? _currentUser;
-  AdminUser? _currentAdmin;
   AuthRole _currentRole = AuthRole.none;
 
   List<Job> _jobs = const [
@@ -367,12 +361,6 @@ class AppState extends ChangeNotifier {
   final Set<String> _savedJobIds = {};
   List<JobNotification> _notifications = [];
 
-  // Admin datasets
-  List<Scraper> _scrapers = [];
-  List<ScrapedJob> _scrapedJobs = [];
-  List<ManagedUser> _managedUsers = [];
-  List<SystemLog> _systemLogs = [];
-
   bool _isDarkMode = false;
   bool _isLoading = false;
 
@@ -383,7 +371,7 @@ class AppState extends ChangeNotifier {
   String _selectedLanguage = 'English';
 
   AppState() {
-    // Initial async sync with real backend and restore session
+    // Initial async sync with backend and restore session
     initSession();
     syncWithBackend();
   }
@@ -405,20 +393,13 @@ class AppState extends ChangeNotifier {
       final session = await SessionStorageService.instance.getSession();
       if (session != null) {
         final token = session['token'] as String?;
-        final role = session['role'] as String?;
         final userData = session['userData'] as Map<String, dynamic>?;
-        final adminData = session['adminData'] as Map<String, dynamic>?;
 
         if (token != null && token.isNotEmpty) {
           ApiService.instance.authToken = token;
 
-          if (role == 'admin' && adminData != null) {
-            _currentAdmin = AdminUser.fromJson(adminData);
-            _currentUser = null;
-            _currentRole = AuthRole.admin;
-          } else if (role == 'user' && userData != null) {
+          if (userData != null) {
             _currentUser = User.fromJson(userData);
-            _currentAdmin = null;
             _currentRole = AuthRole.user;
           }
         }
@@ -432,25 +413,12 @@ class AppState extends ChangeNotifier {
 
   // Getters
   User? get currentUser => _currentUser;
-  AdminUser? get currentAdmin => _currentAdmin;
   AuthRole get currentRole => _currentRole;
   bool get isLoading => _isLoading;
 
   List<Job> get jobs => List.unmodifiable(_jobs);
   Set<String> get savedJobIds => Set.unmodifiable(_savedJobIds);
   List<JobNotification> get notifications => List.unmodifiable(_notifications);
-
-  // Admin getters
-  List<Scraper> get scrapers => List.unmodifiable(_scrapers);
-  List<ScrapedJob> get scrapedJobs => List.unmodifiable(_scrapedJobs);
-  List<ManagedUser> get managedUsers => List.unmodifiable(_managedUsers);
-  List<SystemLog> get systemLogs => List.unmodifiable(_systemLogs);
-
-  int get totalScrapers => _scrapers.length;
-  int get activeScrapersCount => _scrapers.where((s) => s.status == ScraperStatus.active).length;
-  int get failedScrapersCount => _scrapers.where((s) => s.status == ScraperStatus.failed).length;
-  int get pendingScrapedJobsCount => _scrapedJobs.where((s) => s.reviewStatus == ScrapedJobReviewStatus.pending).length;
-  int get approvedScrapedJobsCount => _scrapedJobs.where((s) => s.reviewStatus == ScrapedJobReviewStatus.approved).length;
 
   bool get isDarkMode => _isDarkMode;
   bool get pushNotificationsEnabled => _pushNotificationsEnabled;
@@ -479,7 +447,7 @@ class AppState extends ChangeNotifier {
 
   bool isJobSaved(String jobId) => _savedJobIds.contains(jobId);
 
-  /// Synchronize all real datasets with backend MongoDB APIs
+  /// Synchronize jobs and notifications with backend MongoDB APIs
   Future<void> syncWithBackend() async {
     _isLoading = true;
     notifyListeners();
@@ -489,26 +457,6 @@ class AppState extends ChangeNotifier {
       if (fetchedJobs.isNotEmpty) {
         _jobs = fetchedJobs;
       }
-
-      try {
-        final scrapers = await ApiService.instance.fetchScrapers();
-        if (scrapers.isNotEmpty) _scrapers = scrapers;
-      } catch (_) {}
-
-      try {
-        final scrapedJobs = await ApiService.instance.fetchScrapedJobs();
-        if (scrapedJobs.isNotEmpty) _scrapedJobs = scrapedJobs;
-      } catch (_) {}
-
-      try {
-        final users = await ApiService.instance.fetchManagedUsers();
-        if (users.isNotEmpty) _managedUsers = users;
-      } catch (_) {}
-
-      try {
-        final logs = await ApiService.instance.fetchSystemLogs();
-        if (logs.isNotEmpty) _systemLogs = logs;
-      } catch (_) {}
 
       try {
         final notifs = await ApiService.instance.fetchNotifications();
@@ -524,7 +472,7 @@ class AppState extends ChangeNotifier {
 
   // Authentication Actions
 
-  /// Send system auto-generated 6-digit OTP code to candidate/admin email
+  /// Send system auto-generated 6-digit OTP code to candidate email
   Future<Map<String, dynamic>?> sendEmailOtp(String email) async {
     return await ApiService.instance.sendEmailOtp(email.trim().toLowerCase());
   }
@@ -534,43 +482,14 @@ class AppState extends ChangeNotifier {
     final res = await ApiService.instance.verifyEmailOtp(email.trim().toLowerCase(), otp.trim());
     if (res != null && res['success'] == true) {
       final token = res['token'] ?? ApiService.instance.authToken ?? '';
-      if (res['role'] == 'admin' && res['admin'] != null) {
-        _currentAdmin = AdminUser.fromJson(res['admin']);
-        _currentUser = null;
-        _currentRole = AuthRole.admin;
-        await SessionStorageService.instance.saveSession(
-          token: token,
-          role: 'admin',
-          adminData: res['admin'],
-        );
-        await SessionStorageService.instance.saveLastIdentifier(email);
-        addSystemLog(SystemLog(
-          id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-          timestamp: 'Just now',
-          eventType: 'Authentication',
-          description: 'Admin email OTP session verified ($email).',
-          level: LogLevel.success,
-          source: 'Auth System',
-        ));
-        notifyListeners();
-      } else if (res['role'] == 'user' && res['user'] != null) {
+      if (res['user'] != null) {
         _currentUser = User.fromJson(res['user']);
-        _currentAdmin = null;
         _currentRole = AuthRole.user;
         await SessionStorageService.instance.saveSession(
           token: token,
-          role: 'user',
           userData: res['user'],
         );
         await SessionStorageService.instance.saveLastIdentifier(email);
-        addSystemLog(SystemLog(
-          id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-          timestamp: 'Just now',
-          eventType: 'Authentication',
-          description: 'Candidate signed in via Email OTP ($email).',
-          level: LogLevel.info,
-          source: 'Auth System',
-        ));
         notifyListeners();
       }
       return res;
@@ -589,52 +508,20 @@ class AppState extends ChangeNotifier {
     final id = identifier.trim().toLowerCase();
     final p = password.trim();
 
-    // 1. Attempt login via unified REST API
+    // 1. Attempt login via REST API
     final res = await ApiService.instance.login(identifier: id, password: p);
     if (res != null) {
-      if (res['success'] == true) {
+      if (res['success'] == true && res['user'] != null) {
         final token = res['token'] ?? ApiService.instance.authToken ?? '';
-        if (res['role'] == 'admin' && res['admin'] != null) {
-          _currentRole = AuthRole.admin;
-          _currentAdmin = AdminUser.fromJson(res['admin']);
-          _currentUser = null;
-          await SessionStorageService.instance.saveSession(
-            token: token,
-            role: 'admin',
-            adminData: res['admin'],
-          );
-          await SessionStorageService.instance.saveLastIdentifier(id);
-          addSystemLog(SystemLog(
-            id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-            timestamp: 'Just now',
-            eventType: 'Authentication',
-            description: 'Admin signed in via Email/Password (${_currentAdmin!.email}).',
-            level: LogLevel.success,
-            source: 'Auth System',
-          ));
-          notifyListeners();
-          return {'success': true, 'role': AuthRole.admin, 'message': 'Welcome Administrator'};
-        } else if (res['role'] == 'user' && res['user'] != null) {
-          _currentRole = AuthRole.user;
-          _currentUser = User.fromJson(res['user']);
-          _currentAdmin = null;
-          await SessionStorageService.instance.saveSession(
-            token: token,
-            role: 'user',
-            userData: res['user'],
-          );
-          await SessionStorageService.instance.saveLastIdentifier(id);
-          addSystemLog(SystemLog(
-            id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-            timestamp: 'Just now',
-            eventType: 'Authentication',
-            description: 'Candidate signed in via Email/Password (${_currentUser!.name}).',
-            level: LogLevel.info,
-            source: 'Auth System',
-          ));
-          notifyListeners();
-          return {'success': true, 'role': AuthRole.user, 'message': 'Login successful'};
-        }
+        _currentRole = AuthRole.user;
+        _currentUser = User.fromJson(res['user']);
+        await SessionStorageService.instance.saveSession(
+          token: token,
+          userData: res['user'],
+        );
+        await SessionStorageService.instance.saveLastIdentifier(id);
+        notifyListeners();
+        return {'success': true, 'role': AuthRole.user, 'message': 'Login successful'};
       }
 
       // Check if server indicated notRegistered
@@ -655,12 +542,6 @@ class AppState extends ChangeNotifier {
       };
     }
 
-    // 2. Fallback to local offline accounts if server offline
-    final fallbackRole = loginWithLocalCredentials(id, p);
-    if (fallbackRole != AuthRole.none) {
-      return {'success': true, 'role': fallbackRole, 'message': 'Login successful (Offline)'};
-    }
-
     return {
       'success': false,
       'role': AuthRole.none,
@@ -671,19 +552,7 @@ class AppState extends ChangeNotifier {
 
   /// Send Password Reset OTP Code to email
   Future<Map<String, dynamic>?> forgotPasswordAsync(String email) async {
-    final res = await ApiService.instance.forgotPassword(email);
-    if (res != null && res['success'] == true) {
-      addSystemLog(SystemLog(
-        id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-        timestamp: 'Just now',
-        eventType: 'Password Reset',
-        description: 'Password reset OTP requested for $email.',
-        level: LogLevel.info,
-        source: 'Auth System',
-      ));
-      notifyListeners();
-    }
-    return res;
+    return await ApiService.instance.forgotPassword(email);
   }
 
   /// Verify OTP and reset password
@@ -692,28 +561,11 @@ class AppState extends ChangeNotifier {
     required String otp,
     required String newPassword,
   }) async {
-    final res = await ApiService.instance.resetPassword(
+    return await ApiService.instance.resetPassword(
       email: email,
       otp: otp,
       newPassword: newPassword,
     );
-    if (res != null && res['success'] == true) {
-      addSystemLog(SystemLog(
-        id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-        timestamp: 'Just now',
-        eventType: 'Password Reset',
-        description: 'Password reset successfully for $email.',
-        level: LogLevel.success,
-        source: 'Auth System',
-      ));
-      notifyListeners();
-    }
-    return res;
-  }
-
-  /// Synchronous fallback (Strictly requires backend server)
-  AuthRole loginWithLocalCredentials(String identifier, String password) {
-    return AuthRole.none;
   }
 
   Future<void> registerUserAsync(Map<String, dynamic> data) async {
@@ -721,11 +573,9 @@ class AppState extends ChangeNotifier {
     if (res != null && res['user'] != null) {
       _currentUser = res['user'] as User;
       _currentRole = AuthRole.user;
-      _currentAdmin = null;
       final token = res['token'] ?? ApiService.instance.authToken ?? '';
       await SessionStorageService.instance.saveSession(
         token: token,
-        role: 'user',
         userData: _currentUser!.toJson(),
       );
       if (data['email'] != null) {
@@ -738,7 +588,6 @@ class AppState extends ChangeNotifier {
   void registerUser(User user) {
     _currentUser = user;
     _currentRole = AuthRole.user;
-    _currentAdmin = null;
     notifyListeners();
   }
 
@@ -757,7 +606,6 @@ class AppState extends ChangeNotifier {
 
   void logout() {
     _currentUser = null;
-    _currentAdmin = null;
     _currentRole = AuthRole.none;
     ApiService.instance.authToken = null;
     SessionStorageService.instance.clearSession();
@@ -794,272 +642,6 @@ class AppState extends ChangeNotifier {
 
   void deleteNotification(String id) {
     _notifications.removeWhere((n) => n.id == id);
-    notifyListeners();
-  }
-
-  // Admin Actions: Scrapers
-  void toggleScraperStatus(String id) {
-    final index = _scrapers.indexWhere((s) => s.id == id);
-    if (index != -1) {
-      final current = _scrapers[index];
-      final newStatus = current.status == ScraperStatus.active
-          ? ScraperStatus.inactive
-          : ScraperStatus.active;
-      _scrapers[index] = current.copyWith(status: newStatus);
-
-      addSystemLog(SystemLog(
-        id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-        timestamp: 'Just now',
-        eventType: 'Scraper Config',
-        description: '${current.name} was ${newStatus == ScraperStatus.active ? "enabled" : "disabled"} by Admin.',
-        level: LogLevel.info,
-        source: current.name,
-      ));
-
-      notifyListeners();
-    }
-  }
-
-  /// Run real live web scraper on demand through backend scraper engine
-  Future<void> runScraper(String id) async {
-    final index = _scrapers.indexWhere((s) => s.id == id);
-    if (index != -1) {
-      final current = _scrapers[index];
-
-      // Trigger real backend scraper execution
-      final result = await ApiService.instance.triggerScraper(id);
-
-      if (result != null && result['data'] != null) {
-        _scrapers[index] = Scraper.fromJson(result['data']);
-      } else {
-        // Fallback local visual update
-        _scrapers[index] = current.copyWith(
-          status: ScraperStatus.active,
-          lastRun: 'Just now',
-          jobsCollected: current.jobsCollected + 2,
-          lastError: null,
-        );
-      }
-
-      addSystemLog(SystemLog(
-        id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-        timestamp: 'Just now',
-        eventType: 'Scraper Run',
-        description: 'Live scraper run completed for ${current.name}.',
-        level: LogLevel.success,
-        source: current.name,
-      ));
-
-      // Refresh scraped jobs queue and live jobs
-      final freshScraped = await ApiService.instance.fetchScrapedJobs();
-      if (freshScraped.isNotEmpty) {
-        _scrapedJobs = freshScraped;
-      }
-
-      notifyListeners();
-    }
-  }
-
-  Future<bool> createScraper({
-    required String name,
-    required String targetUrl,
-    String category = 'State Govt',
-    String schedule = 'Every 4 hours',
-    int frequencyMinutes = 240,
-  }) async {
-    final newScraper = await ApiService.instance.addScraper({
-      'name': name.trim(),
-      'targetUrl': targetUrl.trim(),
-      'category': category,
-      'schedule': schedule,
-      'frequencyMinutes': frequencyMinutes,
-      'scraperType': 'live_web',
-      'status': 'active',
-    });
-
-    if (newScraper != null) {
-      _scrapers.insert(0, newScraper);
-      addSystemLog(SystemLog(
-        id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-        timestamp: 'Just now',
-        eventType: 'Scraper Created',
-        description: 'New scraper "$name" configured for $targetUrl.',
-        level: LogLevel.success,
-        source: 'Admin Portal',
-      ));
-      notifyListeners();
-      return true;
-    }
-    return false;
-  }
-
-  Future<bool> removeScraper(String id) async {
-    final success = await ApiService.instance.deleteScraper(id);
-    _scrapers.removeWhere((s) => s.id == id);
-    addSystemLog(SystemLog(
-      id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-      timestamp: 'Just now',
-      eventType: 'Scraper Deleted',
-      description: 'Scraper $id removed from monitoring system.',
-      level: LogLevel.info,
-      source: 'Admin Portal',
-    ));
-    notifyListeners();
-    return success;
-  }
-
-  // Admin Actions: Scraped Jobs Review
-  Future<void> approveScrapedJob(String id) async {
-    final index = _scrapedJobs.indexWhere((j) => j.id == id);
-    if (index != -1) {
-      final scraped = _scrapedJobs[index];
-      _scrapedJobs[index] = scraped.copyWith(
-        reviewStatus: ScrapedJobReviewStatus.approved,
-        rejectionReason: null,
-      );
-
-      // Create new live job from approved scraped job
-      final liveJobId = 'live_${scraped.id}';
-      if (!_jobs.any((j) => j.id == liveJobId)) {
-        final newLiveJob = Job(
-          id: liveJobId,
-          title: scraped.title,
-          organization: scraped.organization,
-          department: 'Approved Government Notice',
-          jobType: 'Central / State Govt',
-          location: scraped.location,
-          vacancies: scraped.vacancies,
-          qualification: scraped.qualification,
-          courseRequirements: 'Relevant qualification required',
-          ageMin: 18,
-          ageMax: 35,
-          category: 'All Categories',
-          experience: 'Fresher / Experienced',
-          applicationStartDate: scraped.scrapedDate,
-          lastDate: scraped.lastDate,
-          applicationFee: 'As per official notification',
-          selectionProcess: 'Computer Based Test / Interview',
-          salary: scraped.salary,
-          description: '${scraped.title} released by ${scraped.organization}. Verified and approved by JobSense Administration.',
-          officialNotificationUrl: scraped.officialUrl,
-        );
-        _jobs.insert(0, newLiveJob);
-      }
-
-      // Sync approval with backend MongoDB
-      await ApiService.instance.approveScrapedJob(id, scraped.toJson());
-
-      addSystemLog(SystemLog(
-        id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-        timestamp: 'Just now',
-        eventType: 'Job Approval',
-        description: 'Approved scraped job: "${scraped.title}". Pushed to candidate eligibility matching.',
-        level: LogLevel.success,
-        source: 'Job Moderation',
-      ));
-
-      notifyListeners();
-    }
-  }
-
-  Future<void> rejectScrapedJob(String id, [String? reason]) async {
-    final index = _scrapedJobs.indexWhere((j) => j.id == id);
-    if (index != -1) {
-      final scraped = _scrapedJobs[index];
-      _scrapedJobs[index] = scraped.copyWith(
-        reviewStatus: ScrapedJobReviewStatus.rejected,
-        rejectionReason: reason ?? 'Rejected by Admin review',
-      );
-
-      await ApiService.instance.rejectScrapedJob(id);
-
-      addSystemLog(SystemLog(
-        id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-        timestamp: 'Just now',
-        eventType: 'Job Rejection',
-        description: 'Rejected job announcement: "${scraped.title}". Reason: ${reason ?? "Criteria not satisfied"}.',
-        level: LogLevel.warning,
-        source: 'Job Moderation',
-      ));
-
-      notifyListeners();
-    }
-  }
-
-  void editScrapedJob(ScrapedJob updatedJob) {
-    final index = _scrapedJobs.indexWhere((j) => j.id == updatedJob.id);
-    if (index != -1) {
-      _scrapedJobs[index] = updatedJob;
-
-      addSystemLog(SystemLog(
-        id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-        timestamp: 'Just now',
-        eventType: 'Job Edit',
-        description: 'Admin modified metadata for job "${updatedJob.title}".',
-        level: LogLevel.info,
-        source: 'Job Moderation',
-      ));
-
-      notifyListeners();
-    }
-  }
-
-  void deleteScrapedJob(String id) {
-    final job = _scrapedJobs.firstWhere((j) => j.id == id, orElse: () => _scrapedJobs.first);
-    _scrapedJobs.removeWhere((j) => j.id == id);
-
-    addSystemLog(SystemLog(
-      id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-      timestamp: 'Just now',
-      eventType: 'Job Deletion',
-      description: 'Removed scraped job entry: "${job.title}".',
-      level: LogLevel.warning,
-      source: 'Job Moderation',
-    ));
-
-    notifyListeners();
-  }
-
-  // Admin Actions: Users
-  Future<void> toggleUserBlock(String userId, [String? reason]) async {
-    final index = _managedUsers.indexWhere((u) => u.id == userId);
-    if (index != -1) {
-      final user = _managedUsers[index];
-      final newStatus = user.status == UserAccountStatus.active
-          ? UserAccountStatus.blocked
-          : UserAccountStatus.active;
-
-      _managedUsers[index] = user.copyWith(
-        status: newStatus,
-        blockReason: newStatus == UserAccountStatus.blocked ? (reason ?? 'Suspended by Admin') : null,
-      );
-
-      await ApiService.instance.toggleUserStatus(userId);
-
-      addSystemLog(SystemLog(
-        id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-        timestamp: 'Just now',
-        eventType: 'User Status',
-        description: 'Candidate ${user.name} (${user.phone}) account status changed to ${newStatus.name.toUpperCase()}.',
-        level: newStatus == UserAccountStatus.blocked ? LogLevel.warning : LogLevel.success,
-        source: 'User Management',
-      ));
-
-      notifyListeners();
-    }
-  }
-
-  // Admin Actions: Logs
-  void addSystemLog(SystemLog log) {
-    _systemLogs.insert(0, log);
-    if (_systemLogs.length > 50) {
-      _systemLogs.removeLast();
-    }
-    notifyListeners();
-  }
-
-  void clearSystemLogs() {
-    _systemLogs.clear();
     notifyListeners();
   }
 

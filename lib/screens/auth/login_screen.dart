@@ -3,7 +3,6 @@ import '../../data/app_state.dart';
 import '../../services/session_storage_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
-import '../admin/admin_main_screen.dart';
 import '../home/home_screen.dart';
 import 'forgot_password_screen.dart';
 import 'otp_screen.dart';
@@ -148,34 +147,18 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoginLoading = false);
 
     if (res['success'] == true) {
-      final role = res['role'] as AuthRole;
-      if (role == AuthRole.admin) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Welcome, ${appState.currentAdmin?.name ?? "Administrator"}!'),
-            backgroundColor: Colors.green.shade700,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const AdminMainScreen()),
-          (route) => false,
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Welcome back, ${appState.currentUser?.name ?? "User"}!'),
-            backgroundColor: Colors.green.shade700,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-          (route) => false,
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Welcome back, ${appState.currentUser?.name ?? "User"}!'),
+          backgroundColor: Colors.green.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        (route) => false,
+      );
     } else {
       // If email is not registered, show the dedicated Alert Dialog
       if (res['notRegistered'] == true) {
@@ -412,7 +395,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         CustomTextField(
                           controller: emailController,
                           label: 'Email Address or Username',
-                          hint: 'e.g. rahul.sharma@example.com or admin',
+                          hint: 'e.g. rahul.sharma@example.com',
                           prefixIcon: const Icon(Icons.email_outlined),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -501,7 +484,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Default Portal Credentials (Tap to autofill):',
+                                    'Demo Candidate Account (Tap to autofill):',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
@@ -511,56 +494,24 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      icon: const Icon(Icons.person, size: 14),
-                                      label: const Text(
-                                        'Candidate (Rahul)',
-                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                                      ),
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                        backgroundColor: theme.colorScheme.surface,
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          emailController.text = 'rahul.sharma@example.com';
-                                          passwordController.text = 'rahul123';
-                                        });
-                                      },
-                                    ),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  icon: const Icon(Icons.person, size: 14),
+                                  label: const Text(
+                                    'Autofill Candidate (rahul.sharma@example.com / rahul123)',
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      icon: const Icon(Icons.admin_panel_settings, size: 14),
-                                      label: const Text(
-                                        'Admin (Portal)',
-                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                                      ),
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                        backgroundColor: theme.colorScheme.surface,
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          emailController.text = 'admin@jobsense.gov.in';
-                                          passwordController.text = 'admin123';
-                                        });
-                                      },
-                                    ),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                    backgroundColor: theme.colorScheme.surface,
                                   ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                '• Candidate: rahul.sharma@example.com / rahul123\n• Administrator: admin@jobsense.gov.in / admin123',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
-                                  height: 1.3,
+                                  onPressed: () {
+                                    setState(() {
+                                      emailController.text = 'rahul.sharma@example.com';
+                                      passwordController.text = 'rahul123';
+                                    });
+                                  },
                                 ),
                               ),
                             ],

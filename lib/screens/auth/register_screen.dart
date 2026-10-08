@@ -407,7 +407,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // Course / Degree Dynamic Dropdown
                 _buildDropdownLabel('Course / Degree Discipline', required: true),
                 DropdownButtonFormField<String>(
-                  value: availableCourses.contains(selectedCourse) ? selectedCourse : availableCourses.first,
+                  initialValue: availableCourses.contains(selectedCourse) ? selectedCourse : availableCourses.first,
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.school_outlined),
                   ),

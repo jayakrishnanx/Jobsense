@@ -3,12 +3,8 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/job.dart';
-import '../models/scraper.dart';
-import '../models/scraped_job.dart';
-import '../models/user.dart';
-import '../models/managed_user.dart';
-import '../models/system_log.dart';
 import '../models/notification.dart';
+import '../models/user.dart';
 
 class ApiService {
   static final ApiService instance = ApiService._internal();
@@ -269,163 +265,6 @@ class ApiService {
     return null;
   }
 
-  // ==================== SCRAPER & SCRAPED JOBS API ====================
-
-  Future<List<Scraper>> fetchScrapers() async {
-    try {
-      final res = await http.get(Uri.parse('$baseUrl/scrapers'), headers: _headers).timeout(const Duration(seconds: 8));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        if (data['success'] == true && data['data'] is List) {
-          return (data['data'] as List).map((s) => Scraper.fromJson(s)).toList();
-        }
-      }
-    } catch (e) {
-      debugPrint('ApiService.fetchScrapers error: $e');
-    }
-    return [];
-  }
-
-  Future<Map<String, dynamic>?> triggerScraper(String scraperId) async {
-    try {
-      final res = await http
-          .post(Uri.parse('$baseUrl/scrapers/$scraperId/run'), headers: _headers)
-          .timeout(const Duration(seconds: 15));
-
-      if (res.statusCode == 200) {
-        return jsonDecode(res.body);
-      }
-    } catch (e) {
-      debugPrint('ApiService.triggerScraper error: $e');
-    }
-    return null;
-  }
-
-  Future<Scraper?> addScraper(Map<String, dynamic> data) async {
-    try {
-      final res = await http
-          .post(
-            Uri.parse('$baseUrl/scrapers'),
-            headers: _headers,
-            body: jsonEncode(data),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (res.statusCode == 200 || res.statusCode == 201) {
-        final resData = jsonDecode(res.body);
-        if (resData['success'] == true && resData['data'] != null) {
-          return Scraper.fromJson(resData['data']);
-        }
-      }
-    } catch (e) {
-      debugPrint('ApiService.addScraper error: $e');
-    }
-    return null;
-  }
-
-  Future<bool> deleteScraper(String scraperId) async {
-    try {
-      final res = await http
-          .delete(Uri.parse('$baseUrl/scrapers/$scraperId'), headers: _headers)
-          .timeout(const Duration(seconds: 8));
-      return res.statusCode == 200;
-    } catch (e) {
-      debugPrint('ApiService.deleteScraper error: $e');
-    }
-    return false;
-  }
-
-  Future<List<ScrapedJob>> fetchScrapedJobs({String? status}) async {
-    try {
-      final uri = status != null && status.isNotEmpty
-          ? Uri.parse('$baseUrl/scraped-jobs?status=$status')
-          : Uri.parse('$baseUrl/scraped-jobs');
-
-      final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 8));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        if (data['success'] == true && data['data'] is List) {
-          return (data['data'] as List).map((sj) => ScrapedJob.fromJson(sj)).toList();
-        }
-      }
-    } catch (e) {
-      debugPrint('ApiService.fetchScrapedJobs error: $e');
-    }
-    return [];
-  }
-
-  Future<bool> approveScrapedJob(String id, Map<String, dynamic> data) async {
-    try {
-      final res = await http
-          .post(
-            Uri.parse('$baseUrl/scraped-jobs/$id/approve'),
-            headers: _headers,
-            body: jsonEncode(data),
-          )
-          .timeout(const Duration(seconds: 8));
-      return res.statusCode == 200;
-    } catch (e) {
-      debugPrint('ApiService.approveScrapedJob error: $e');
-      return false;
-    }
-  }
-
-  Future<bool> rejectScrapedJob(String id) async {
-    try {
-      final res = await http
-          .post(Uri.parse('$baseUrl/scraped-jobs/$id/reject'), headers: _headers)
-          .timeout(const Duration(seconds: 8));
-      return res.statusCode == 200;
-    } catch (e) {
-      debugPrint('ApiService.rejectScrapedJob error: $e');
-      return false;
-    }
-  }
-
-  // ==================== ADMIN & USERS API ====================
-
-  Future<List<ManagedUser>> fetchManagedUsers() async {
-    try {
-      final res = await http.get(Uri.parse('$baseUrl/users'), headers: _headers).timeout(const Duration(seconds: 8));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        if (data['success'] == true && data['data'] is List) {
-          return (data['data'] as List).map((u) => ManagedUser.fromJson(u)).toList();
-        }
-      }
-    } catch (e) {
-      debugPrint('ApiService.fetchManagedUsers error: $e');
-    }
-    return [];
-  }
-
-  Future<bool> toggleUserStatus(String userId) async {
-    try {
-      final res = await http
-          .post(Uri.parse('$baseUrl/users/$userId/toggle-status'), headers: _headers)
-          .timeout(const Duration(seconds: 8));
-      return res.statusCode == 200;
-    } catch (e) {
-      debugPrint('ApiService.toggleUserStatus error: $e');
-      return false;
-    }
-  }
-
-  Future<List<SystemLog>> fetchSystemLogs() async {
-    try {
-      final res = await http.get(Uri.parse('$baseUrl/logs'), headers: _headers).timeout(const Duration(seconds: 8));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        if (data['success'] == true && data['data'] is List) {
-          return (data['data'] as List).map((l) => SystemLog.fromJson(l)).toList();
-        }
-      }
-    } catch (e) {
-      debugPrint('ApiService.fetchSystemLogs error: $e');
-    }
-    return [];
-  }
-
   Future<List<JobNotification>> fetchNotifications() async {
     try {
       final res = await http
@@ -454,19 +293,5 @@ class ApiService {
       return false;
     }
   }
-
-  Future<Map<String, dynamic>?> fetchAdminStats() async {
-    try {
-      final res = await http.get(Uri.parse('$baseUrl/stats'), headers: _headers).timeout(const Duration(seconds: 8));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        if (data['success'] == true && data['data'] != null) {
-          return data['data'];
-        }
-      }
-    } catch (e) {
-      debugPrint('ApiService.fetchAdminStats error: $e');
-    }
-    return null;
-  }
 }
+

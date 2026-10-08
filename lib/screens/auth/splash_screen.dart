@@ -1,7 +1,5 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../data/app_state.dart';
-import '../admin/admin_main_screen.dart';
 import '../home/home_screen.dart';
 import 'login_screen.dart';
 
@@ -44,14 +42,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     if (!mounted) return;
 
-    if (appState.currentRole == AuthRole.admin && appState.currentAdmin != null) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const AdminMainScreen(),
-        ),
-      );
-    } else if (appState.currentRole == AuthRole.user && appState.currentUser != null) {
+    if (appState.currentRole == AuthRole.user && appState.currentUser != null) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

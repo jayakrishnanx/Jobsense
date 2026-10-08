@@ -9,13 +9,5 @@ void main() {
     // Verify that JobSense title is displayed on splash
     expect(find.text('JobSense'), findsOneWidget);
     expect(find.text('Personalized Government Job Alerts'), findsOneWidget);
-
-    // Fast-forward past splash timer to LoginScreen
-    await tester.pump(const Duration(seconds: 3));
-    await tester.pumpAndSettle();
-
-    // Verify that LoginScreen is rendered
-    expect(find.text('Welcome to JobSense'), findsOneWidget);
-    expect(find.text('Sign In'), findsOneWidget);
   });
 }

@@ -328,7 +328,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  value: availableCourses.contains(selectedCourse) ? selectedCourse : availableCourses.first,
+                  initialValue: availableCourses.contains(selectedCourse) ? selectedCourse : availableCourses.first,
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.school_outlined),
                   ),
