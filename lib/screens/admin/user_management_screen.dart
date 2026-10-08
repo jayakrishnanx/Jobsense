@@ -195,21 +195,41 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final users = appState.managedUsers.where((u) {
-      final q = _searchQuery.toLowerCase();
-      final matchesQuery = u.name.toLowerCase().contains(q) ||
-          u.phone.contains(q) ||
-          u.email.toLowerCase().contains(q) ||
-          u.qualification.toLowerCase().contains(q);
-      final matchesStatus = _statusFilter == null || u.status == _statusFilter;
-      return matchesQuery && matchesStatus;
-    }).toList();
+    return ListenableBuilder(
+      listenable: appState,
+      builder: (context, _) {
+        final users = appState.managedUsers.where((u) {
+          final q = _searchQuery.toLowerCase();
+          final matchesQuery = u.name.toLowerCase().contains(q) ||
+              u.phone.contains(q) ||
+              u.email.toLowerCase().contains(q) ||
+              u.qualification.toLowerCase().contains(q);
+          final matchesStatus = _statusFilter == null || u.status == _statusFilter;
+          return matchesQuery && matchesStatus;
+        }).toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('User Management'),
-      ),
-      body: Column(
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('User Management'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Refresh from DB',
+                onPressed: () {
+                  appState.syncWithBackend();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Refreshing users from MongoDB...'),
+                      duration: Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          body: Column(
+
         children: [
           // Filter & Search bar
           Container(
@@ -491,5 +511,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         ],
       ),
     );
+      },
+    );
   }
 }
+

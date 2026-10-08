@@ -187,14 +187,19 @@ class _HomeDashboardState extends State<HomeDashboard> {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              width: 32,
+              height: 32,
+              padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.work_rounded, color: Colors.white, size: 18),
+              child: Image.asset(
+                'assets/images/logo.png',
+                fit: BoxFit.contain,
+              ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             const Text('JobSense'),
           ],
         ),
@@ -221,9 +226,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          await Future.delayed(const Duration(milliseconds: 500));
-        },
+        onRefresh: () => appState.syncWithBackend(),
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Column(
@@ -355,7 +358,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               ),
               const SizedBox(height: 8),
               SizedBox(
-                height: 240,
+                height: 265,
                 child: eligibleJobs.isEmpty
                     ? const Center(
                         child: Text(
@@ -427,7 +430,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               const SizedBox(height: 8),
 
               SizedBox(
-                height: 240,
+                height: 265,
                 child: PageView.builder(
                   controller: _recentPageController,
                   padEnds: false,

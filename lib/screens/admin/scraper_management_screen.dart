@@ -128,16 +128,146 @@ class _ScraperManagementScreenState extends State<ScraperManagementScreen> {
               ),
             ],
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _runScraperManually(scraper);
-                },
-                icon: const Icon(Icons.play_arrow),
-                label: const Text('Execute Scraper Cycle Now'),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _runScraperManually(scraper);
+                    },
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('Execute Run'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  tooltip: 'Delete Scraper',
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await appState.removeScraper(scraper.id);
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Removed ${scraper.name}'),
+                        backgroundColor: Colors.red.shade700,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddScraperDialog() {
+    final nameCtrl = TextEditingController();
+    final urlCtrl = TextEditingController();
+    final deptCtrl = TextEditingController();
+    String category = 'Kerala PSC';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDlgState) => AlertDialog(
+          title: const Text('Add Target Website'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Website / Portal Name *',
+                    hintText: 'e.g. Kerala PSC Notifications',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: urlCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Target URL *',
+                    hintText: 'https://...',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: deptCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Department / Organization',
+                    hintText: 'e.g. Kerala Public Service Commission',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: category,
+                  decoration: const InputDecoration(
+                    labelText: 'Category',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'Kerala PSC', child: Text('Kerala PSC')),
+                    DropdownMenuItem(value: 'Central Govt', child: Text('Central Govt')),
+                    DropdownMenuItem(value: 'State Govt', child: Text('State Govt')),
+                    DropdownMenuItem(value: 'Banking', child: Text('Banking')),
+                    DropdownMenuItem(value: 'Railway', child: Text('Railway')),
+                    DropdownMenuItem(value: 'Defence & Research', child: Text('Defence & Research')),
+                    DropdownMenuItem(value: 'Other', child: Text('Other')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setDlgState(() => category = val);
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final name = nameCtrl.text.trim();
+                final url = urlCtrl.text.trim();
+                if (name.isEmpty || url.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter portal name and URL'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  return;
+                }
+                Navigator.pop(ctx);
+                final ok = await appState.createScraper(
+                  name: name,
+                  targetUrl: url,
+                  category: category,
+                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(ok ? 'Website added successfully!' : 'Failed to add website'),
+                      backgroundColor: ok ? Colors.green.shade700 : Colors.red.shade700,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Add Website'),
             ),
           ],
         ),
@@ -161,21 +291,39 @@ class _ScraperManagementScreenState extends State<ScraperManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scrapers = appState.scrapers.where((s) {
-      final matchesQuery = s.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          s.website.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          s.department.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesStatus = _statusFilter == null || s.status == _statusFilter;
-      return matchesQuery && matchesStatus;
-    }).toList();
+    return ListenableBuilder(
+      listenable: appState,
+      builder: (context, _) {
+        final scrapers = appState.scrapers.where((s) {
+          final matchesQuery = s.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              s.website.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              s.department.toLowerCase().contains(_searchQuery.toLowerCase());
+          final matchesStatus = _statusFilter == null || s.status == _statusFilter;
+          return matchesQuery && matchesStatus;
+        }).toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Scraper Management'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            tooltip: 'Scraper Architecture Info',
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Scraper Management'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Refresh Scrapers from DB',
+                onPressed: () {
+                  appState.syncWithBackend();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Refreshing scrapers from MongoDB...'),
+                      duration: Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.info_outline),
+                tooltip: 'Scraper Architecture Info',
+
             onPressed: () {
               showDialog(
                 context: context,
@@ -253,13 +401,31 @@ class _ScraperManagementScreenState extends State<ScraperManagementScreen> {
           Expanded(
             child: scrapers.isEmpty
                 ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.search_off, size: 48, color: Colors.grey.shade400),
-                        const SizedBox(height: 12),
-                        const Text('No scrapers match your query'),
-                      ],
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.language, size: 56, color: Colors.grey.shade400),
+                          const SizedBox(height: 14),
+                          const Text(
+                            'No websites configured yet',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Add your target recruitment portals one by one to begin crawling and scraping notices.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                          ),
+                          const SizedBox(height: 18),
+                          ElevatedButton.icon(
+                            onPressed: _showAddScraperDialog,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add Target Website'),
+                          ),
+                        ],
+                      ),
                     ),
                   )
                 : ListView.builder(
@@ -477,6 +643,15 @@ class _ScraperManagementScreenState extends State<ScraperManagementScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddScraperDialog,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Website'),
+      ),
+    );
+      },
     );
   }
 }
+
+

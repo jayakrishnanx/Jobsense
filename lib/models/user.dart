@@ -90,4 +90,39 @@ class User {
     if (district.trim().isEmpty) missing.add('District');
     return missing;
   }
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'] ?? json['_id'] ?? '',
+      name: json['name'] ?? '',
+      phone: json['phone'] ?? '',
+      email: json['email'] ?? '',
+      dob: json['dob'] ?? '',
+      gender: json['gender'] ?? '',
+      qualification: json['qualification'] ?? '',
+      course: json['course'] ?? '',
+      yearOfPassing: json['yearOfPassing'] ?? '',
+      category: json['category'] ?? '',
+      state: json['state'] ?? '',
+      district: json['district'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'phone': phone,
+      'email': email,
+      'dob': dob,
+      'gender': gender,
+      'qualification': qualification,
+      'course': course,
+      'yearOfPassing': yearOfPassing,
+      'category': category,
+      'state': state,
+      'district': district,
+    };
+  }
 }
+

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../data/app_state.dart';
-import '../../app/theme.dart';
 import 'admin_dashboard_screen.dart';
 import 'scraper_management_screen.dart';
 import 'scraped_jobs_screen.dart';
@@ -64,12 +63,24 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
                   leading: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Container(
-                      padding: const EdgeInsets.all(8),
+                      width: 44,
+                      height: 44,
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue,
-                        borderRadius: BorderRadius.circular(10),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                      child: const Icon(Icons.shield, color: Colors.white, size: 24),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   destinations: const [

@@ -9,10 +9,24 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
  * Generate a JWT token for a user or admin
  */
 const generateToken = (payload) => {
-    return jwt.sign(payload, JWT_SECRET, {
+    let cleanPayload = {};
+    if (payload && payload._id) {
+        cleanPayload = {
+            id: payload._id.toString(),
+            accountType: payload.role ? "admin" : "user",
+            username: payload.username,
+        };
+    } else if (typeof payload === "object") {
+        cleanPayload = { ...payload };
+    } else {
+        cleanPayload = { id: String(payload) };
+    }
+
+    return jwt.sign(cleanPayload, JWT_SECRET, {
         expiresIn: JWT_EXPIRES_IN,
     });
 };
+
 
 /**
  * Middleware to verify JWT token and attach user/admin object

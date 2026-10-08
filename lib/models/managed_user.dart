@@ -58,4 +58,42 @@ class ManagedUser {
       blockReason: blockReason ?? this.blockReason,
     );
   }
+
+  factory ManagedUser.fromJson(Map<String, dynamic> json) {
+    final isActive = json['isActive'] != false;
+    return ManagedUser(
+      id: json['id'] ?? json['_id'] ?? '',
+      name: json['name'] ?? '',
+      phone: json['phone'] ?? '',
+      email: json['email'] ?? '',
+      registrationDate: json['createdAt'] != null
+          ? json['createdAt'].toString().split('T')[0]
+          : (json['registrationDate'] ?? 'Recently'),
+      status: isActive ? UserAccountStatus.active : UserAccountStatus.blocked,
+      profileCompletion: json['profileCompletion'] ?? 85,
+      eligibleJobsCount: json['eligibleJobsCount'] ?? 5,
+      qualification: json['qualification'] ?? 'Degree',
+      category: json['category'] ?? 'General',
+      state: json['state'] ?? 'Kerala',
+      blockReason: json['blockReason'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'phone': phone,
+      'email': email,
+      'registrationDate': registrationDate,
+      'status': status.name,
+      'profileCompletion': profileCompletion,
+      'eligibleJobsCount': eligibleJobsCount,
+      'qualification': qualification,
+      'category': category,
+      'state': state,
+      'blockReason': blockReason,
+    };
+  }
 }
+

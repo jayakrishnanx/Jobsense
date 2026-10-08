@@ -34,4 +34,39 @@ class SystemLog {
       source: source ?? this.source,
     );
   }
+
+  factory SystemLog.fromJson(Map<String, dynamic> json) {
+    LogLevel level = LogLevel.info;
+    final lvlStr = (json['level'] ?? '').toString().toUpperCase();
+    if (lvlStr == 'SUCCESS') {
+      level = LogLevel.success;
+    } else if (lvlStr == 'WARN' || lvlStr == 'WARNING') {
+      level = LogLevel.warning;
+    } else if (lvlStr == 'ERROR') {
+      level = LogLevel.error;
+    }
+
+    return SystemLog(
+      id: json['id'] ?? json['_id'] ?? '',
+      timestamp: json['timestamp'] != null
+          ? json['timestamp'].toString().replaceFirst('T', ' ').split('.')[0]
+          : 'Just now',
+      eventType: json['category'] ?? json['eventType'] ?? 'SYSTEM',
+      description: json['message'] ?? json['description'] ?? '',
+      level: level,
+      source: json['details'] ?? json['source'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'timestamp': timestamp,
+      'category': eventType,
+      'message': description,
+      'level': level.name.toUpperCase(),
+      'details': source,
+    };
+  }
 }
+

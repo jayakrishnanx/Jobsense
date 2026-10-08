@@ -7,11 +7,11 @@ import '../home/home_screen.dart';
 import 'register_screen.dart';
 
 class OtpScreen extends StatefulWidget {
-  final String phoneNumber;
+  final String email;
 
   const OtpScreen({
     super.key,
-    required this.phoneNumber,
+    required this.email,
   });
 
   @override
@@ -27,6 +27,8 @@ class _OtpScreenState extends State<OtpScreen> {
   @override
   void initState() {
     super.initState();
+    // Keep text field blank so candidate enters code received in real email
+    otpController.text = '';
     _startCountdown();
   }
 
@@ -52,21 +54,10 @@ class _OtpScreenState extends State<OtpScreen> {
   void _verifyOtp() async {
     final enteredOtp = otpController.text.trim();
 
-    if (enteredOtp.isEmpty) {
+    if (enteredOtp.isEmpty || enteredOtp.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter the 6-digit OTP'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    if (enteredOtp != '123456') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Invalid OTP. Please enter 123456'),
-          backgroundColor: Colors.red.shade700,
+          content: Text('Please enter the full 6-digit OTP code sent to your email'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -74,19 +65,29 @@ class _OtpScreenState extends State<OtpScreen> {
     }
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 600));
+
+    // Call real backend verify-email-otp endpoint
+    final verifyRes = await appState.verifyEmailOtp(widget.email, enteredOtp);
+
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    // CRITICAL REQUIREMENT:
-    // EVERY USER MUST VERIFY OTP FIRST.
-    // Check whether phone exists AFTER OTP verification:
-    // 7012823414 -> existing user -> Home
-    // Any other number -> new user -> Registration
-    final isExistingUser = appState.loginWithPhone(widget.phoneNumber);
+    if (verifyRes == null || verifyRes['success'] != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(verifyRes?['message'] ?? 'Invalid or expired OTP. Please check your email and try again.'),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
-    if (isExistingUser) {
-      if (appState.currentRole == AuthRole.admin) {
+    final isNewUser = verifyRes['isNewUser'] == true;
+    final role = verifyRes['role'];
+
+    if (!isNewUser) {
+      if (role == 'admin') {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Welcome, ${appState.currentAdmin?.name ?? 'Administrator'}!'),
@@ -116,7 +117,7 @@ class _OtpScreenState extends State<OtpScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Number verified! Complete your profile to continue.'),
+          content: Text('Email verified! Please complete your candidate registration.'),
           backgroundColor: Colors.blue,
           behavior: SnackBarBehavior.floating,
         ),
@@ -124,22 +125,41 @@ class _OtpScreenState extends State<OtpScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => RegisterScreen(phoneNumber: widget.phoneNumber),
+          builder: (context) => RegisterScreen(email: widget.email),
         ),
       );
     }
   }
 
-  void _resendOtp() {
+  void _resendOtp() async {
     if (_resendCountdown > 0) return;
-    _startCountdown();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('New OTP sent! (Use 123456)'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+
+    setState(() => _isLoading = true);
+    final res = await appState.sendEmailOtp(widget.email);
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (res != null && res['success'] == true) {
+      _startCountdown();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('A fresh verification code has been dispatched to ${widget.email}'),
+          backgroundColor: Colors.green.shade700,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to resend email OTP. Please check your connection.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -148,7 +168,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Verification'),
+        title: const Text('Email Verification'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -189,7 +209,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Sent to +91 ${widget.phoneNumber}',
+                    'Dispatched to ${widget.email}',
                     style: TextStyle(
                       fontSize: 14,
                       color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
@@ -202,36 +222,37 @@ class _OtpScreenState extends State<OtpScreen> {
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: const Text('Edit'),
+                    child: const Text('Change'),
                   ),
                 ],
               ),
 
               const SizedBox(height: 32),
 
-              // 6-digit OTP Field
+              // 6-digit OTP Field (User types code from real email)
               TextField(
                 controller: otpController,
                 keyboardType: TextInputType.number,
                 maxLength: 6,
                 textAlign: TextAlign.center,
+                autofocus: true,
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 12,
                 ),
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: '------',
-                  hintStyle: const TextStyle(
+                  hintStyle: TextStyle(
                     fontSize: 28,
                     letterSpacing: 12,
                     color: Colors.grey,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                  helperText: 'Dummy testing OTP: 123456',
+                  contentPadding: EdgeInsets.symmetric(vertical: 16),
+                  helperText: 'Check your email inbox & enter the 6-digit code',
                   helperStyle: TextStyle(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w600,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 onSubmitted: (_) => _verifyOtp(),
@@ -241,7 +262,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
               // Verify OTP Button
               CustomButton(
-                text: 'Verify OTP',
+                text: 'Verify & Sign In',
                 isLoading: _isLoading,
                 onPressed: _verifyOtp,
               ),
@@ -253,7 +274,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Didn\'t receive the code? ',
+                    'Didn\'t receive the email? ',
                     style: TextStyle(
                       fontSize: 14,
                       color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
@@ -264,7 +285,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     child: Text(
                       _resendCountdown > 0
                           ? 'Resend in ${_resendCountdown}s'
-                          : 'Resend OTP',
+                          : 'Resend Code',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: _resendCountdown > 0

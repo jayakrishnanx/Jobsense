@@ -23,23 +23,48 @@ class SettingsScreen extends StatelessWidget {
             const Text('About JobSense'),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'JobSense v1.0.0 (Frontend Prototype)',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            Center(
+              child: Container(
+                width: 72,
+                height: 72,
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
-            SizedBox(height: 8),
-            Text(
+            const Center(
+              child: Text(
+                'JobSense v1.0.0',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
               'JobSense is a personalized government job notification platform developed for job seekers. '
               'It filters notifications collected from official government portals (UPSC, SSC, State PSCs, RRB, Banking) '
               'and notifies candidates based on their qualification, age, and state criteria.',
               style: TextStyle(fontSize: 13, height: 1.4),
             ),
-            SizedBox(height: 12),
-            Text(
+            const SizedBox(height: 12),
+            const Text(
               'Developed by an MCA student learning Flutter.',
               style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
             ),

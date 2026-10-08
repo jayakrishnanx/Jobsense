@@ -14,204 +14,228 @@ class AdminDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final admin = appState.currentAdmin;
-    final scrapers = appState.scrapers;
-    final scrapedJobs = appState.scrapedJobs;
+    return ListenableBuilder(
+      listenable: appState,
+      builder: (context, _) {
+        final theme = Theme.of(context);
+        final admin = appState.currentAdmin;
+        final scrapers = appState.scrapers;
+        final scrapedJobs = appState.scrapedJobs;
+        final totalJobsCollected = scrapers.fold<int>(0, (sum, s) => sum + s.jobsCollected);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryBlue,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.shield, color: Colors.white, size: 18),
-            ),
-            const SizedBox(width: 8),
-            const Text('JobSense Admin'),
-          ],
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+        return Scaffold(
+          appBar: AppBar(
+            title: Row(
               children: [
                 Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
+                  width: 32,
+                  height: 32,
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    fit: BoxFit.contain,
                   ),
                 ),
-                const SizedBox(width: 6),
-                const Text(
-                  'Pipeline Healthy',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                  ),
-                ),
+                const SizedBox(width: 10),
+                const Text('JobSense Admin'),
               ],
             ),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Welcome & System Supervision Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppTheme.primaryBlue,
-                    AppTheme.primaryLightBlue,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryBlue.withValues(alpha: 0.25),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Sync with Backend',
+                onPressed: () {
+                  appState.syncWithBackend();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Synchronizing with live backend...'),
+                      duration: Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.white24,
-                        child: Icon(Icons.admin_panel_settings, color: Colors.white, size: 22),
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'Live Connected',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Welcome & System Supervision Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.primaryBlue,
+                        AppTheme.primaryLightBlue,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryBlue.withValues(alpha: 0.25),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const CircleAvatar(
+                            radius: 20,
+                            backgroundColor: Colors.white24,
+                            child: Icon(Icons.admin_panel_settings, color: Colors.white, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Supervision Console: ${admin?.name ?? "Admin"}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'Live Government Job Aggregator & Eligibility Engine',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              'Supervision Console: ${admin?.name ?? "Admin"}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'Automated Government Job Aggregator & Eligibility Engine',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.8),
-                                fontSize: 12,
-                              ),
-                            ),
+                            _headerStat('Active Sources', '${appState.totalScrapers} Portals'),
+                            _headerDivider(),
+                            _headerStat('Jobs Collected', '$totalJobsCollected Notices'),
+                            _headerDivider(),
+                            _headerStat('Alerts Ready', '${appState.notifications.length} Alerts'),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _headerStat('Active Sources', '${appState.totalScrapers} Portals'),
-                        _headerDivider(),
-                        _headerStat('Jobs Collected Today', '14 Notifications'),
-                        _headerDivider(),
-                        _headerStat('Alerts Dispatched', '4,820 Candidates'),
-                      ],
-                    ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Section Header: Core Metrics
+                const Text(
+                  'System Overview (Live MongoDB Data)',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
-                ],
-              ),
-            ),
+                ),
+                const SizedBox(height: 12),
 
-            const SizedBox(height: 24),
+                // 4 Grid Metric Cards
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.45,
+                  children: [
+                    _metricCard(
+                      context,
+                      title: 'Total Users',
+                      value: '${appState.managedUsers.length}',
+                      subtitle: 'Registered candidates',
+                      icon: Icons.people_outline,
+                      color: AppTheme.primaryBlue,
+                      onTap: () => onNavigateToTab?.call(3),
+                    ),
+                    _metricCard(
+                      context,
+                      title: 'Total Active Jobs',
+                      value: '${appState.jobs.length}',
+                      subtitle: 'Verified opportunities',
+                      icon: Icons.work_outline,
+                      color: const Color(0xFF0D9488),
+                      onTap: () => onNavigateToTab?.call(2),
+                    ),
+                    _metricCard(
+                      context,
+                      title: 'Active Scrapers',
+                      value: '${appState.activeScrapersCount}',
+                      subtitle: 'Live crawlers ready',
+                      icon: Icons.sync,
+                      color: const Color(0xFF10B981),
+                      onTap: () => onNavigateToTab?.call(1),
+                    ),
+                    _metricCard(
+                      context,
+                      title: 'Pending Review',
+                      value: '${appState.pendingScrapedJobsCount}',
+                      subtitle: 'Scraped jobs queue',
+                      icon: Icons.hourglass_top,
+                      color: const Color(0xFFF59E0B),
+                      onTap: () => onNavigateToTab?.call(2),
+                    ),
+                  ],
+                ),
 
-            // Section Header: Core Metrics
-            const Text(
-              'System Overview',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // 4 Grid Metric Cards
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.45,
-              children: [
-                _metricCard(
-                  context,
-                  title: 'Total Users',
-                  value: '1,250',
-                  subtitle: 'Registered candidates',
-                  icon: Icons.people_outline,
-                  color: AppTheme.primaryBlue,
-                  onTap: () => onNavigateToTab?.call(3),
-                ),
-                _metricCard(
-                  context,
-                  title: 'Total Active Jobs',
-                  value: '${appState.jobs.length}',
-                  subtitle: 'Verified opportunities',
-                  icon: Icons.work_outline,
-                  color: const Color(0xFF0D9488),
-                  onTap: () => onNavigateToTab?.call(2),
-                ),
-                _metricCard(
-                  context,
-                  title: 'Active Scrapers',
-                  value: '${appState.activeScrapersCount}',
-                  subtitle: 'Running scheduled crawls',
-                  icon: Icons.sync,
-                  color: const Color(0xFF10B981),
-                  onTap: () => onNavigateToTab?.call(1),
-                ),
-                _metricCard(
-                  context,
-                  title: 'Failed Scrapers',
-                  value: '${appState.failedScrapersCount}',
-                  subtitle: 'Need timeout review',
-                  icon: Icons.error_outline,
-                  color: const Color(0xFFEF4444),
-                  onTap: () => onNavigateToTab?.call(1),
-                ),
-              ],
-            ),
 
             const SizedBox(height: 28),
 
@@ -451,6 +475,8 @@ class AdminDashboardScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+      },
     );
   }
 

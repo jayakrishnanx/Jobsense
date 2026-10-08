@@ -16,31 +16,36 @@ class _SystemLogsScreenState extends State<SystemLogsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final logs = appState.systemLogs.where((l) {
-      final matchesQuery = l.description.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          l.eventType.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          (l.source?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
-      final matchesLevel = _levelFilter == null || l.level == _levelFilter;
-      return matchesQuery && matchesLevel;
-    }).toList();
+    return ListenableBuilder(
+      listenable: appState,
+      builder: (context, _) {
+        final logs = appState.systemLogs.where((l) {
+          final matchesQuery = l.description.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              l.eventType.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              (l.source?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
+          final matchesLevel = _levelFilter == null || l.level == _levelFilter;
+          return matchesQuery && matchesLevel;
+        }).toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('System Audit Logs'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh Logs',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('System logs refreshed.'),
-                  duration: Duration(seconds: 1),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-          ),
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('System Audit Logs'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Refresh Logs from MongoDB',
+                onPressed: () {
+                  appState.syncWithBackend();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('System logs refreshed from backend.'),
+                      duration: Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+
           IconButton(
             icon: const Icon(Icons.delete_sweep_outlined),
             tooltip: 'Clear Logs',
@@ -271,5 +276,8 @@ class _SystemLogsScreenState extends State<SystemLogsScreen> {
         ],
       ),
     );
+      },
+    );
   }
 }
+

@@ -32,4 +32,29 @@ class AdminUser {
       lastLogin: lastLogin ?? this.lastLogin,
     );
   }
+
+  factory AdminUser.fromJson(Map<String, dynamic> json) {
+    return AdminUser(
+      id: json['id'] ?? json['_id'] ?? '',
+      username: json['username'] ?? '',
+      name: json['name'] ?? '',
+      email: json['email'] ?? '',
+      role: json['role'] ?? 'Administrator',
+      lastLogin: json['lastLogin'] != null
+          ? json['lastLogin'].toString().split('T')[0]
+          : (json['lastLogin'] ?? 'Recently'),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'name': name,
+      'email': email,
+      'role': role,
+      'lastLogin': lastLogin,
+    };
+  }
 }
+

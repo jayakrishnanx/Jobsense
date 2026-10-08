@@ -253,18 +253,38 @@ class _ScrapedJobsScreenState extends State<ScrapedJobsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final jobs = appState.scrapedJobs.where((j) {
-      final matchesQuery = j.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          j.organization.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesStatus = _selectedStatus == null || j.reviewStatus == _selectedStatus;
-      return matchesQuery && matchesStatus;
-    }).toList();
+    return ListenableBuilder(
+      listenable: appState,
+      builder: (context, _) {
+        final jobs = appState.scrapedJobs.where((j) {
+          final matchesQuery = j.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              j.organization.toLowerCase().contains(_searchQuery.toLowerCase());
+          final matchesStatus = _selectedStatus == null || j.reviewStatus == _selectedStatus;
+          return matchesQuery && matchesStatus;
+        }).toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Scraped Jobs Moderation'),
-      ),
-      body: Column(
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Scraped Jobs Moderation'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Refresh Queue from DB',
+                onPressed: () {
+                  appState.syncWithBackend();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Refreshing moderation queue from MongoDB...'),
+                      duration: Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          body: Column(
+
         children: [
           // Filter & Search bar
           Container(
@@ -553,7 +573,10 @@ class _ScrapedJobsScreenState extends State<ScrapedJobsScreen> {
         ],
       ),
     );
+      },
+    );
   }
+
 
   Widget _metaChip(IconData icon, String label) {
     return Container(

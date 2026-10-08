@@ -62,4 +62,53 @@ class ScrapedJob {
       officialUrl: officialUrl ?? this.officialUrl,
     );
   }
+
+  factory ScrapedJob.fromJson(Map<String, dynamic> json) {
+    ScrapedJobReviewStatus reviewStatus = ScrapedJobReviewStatus.pending;
+    final statusStr = (json['reviewStatus'] ?? '').toString().toLowerCase();
+    if (statusStr == 'approved') {
+      reviewStatus = ScrapedJobReviewStatus.approved;
+    } else if (statusStr == 'rejected') {
+      reviewStatus = ScrapedJobReviewStatus.rejected;
+    } else if (statusStr == 'expired') {
+      reviewStatus = ScrapedJobReviewStatus.expired;
+    }
+
+    return ScrapedJob(
+      id: json['id'] ?? json['_id'] ?? '',
+      title: json['title'] ?? '',
+      organization: json['organization'] ?? '',
+      source: json['source'] ?? '',
+      location: json['location'] ?? 'All India',
+      lastDate: json['lastDate'] ?? 'Upcoming',
+      vacancies: json['vacancies'] ?? 'As per notification',
+      qualification: json['qualification'] ?? 'Any Degree / 10th / 12th',
+      salary: json['salary'] ?? 'Govt Standard',
+      scrapedDate: json['scrapedAt'] != null
+          ? json['scrapedAt'].toString().split('T')[0]
+          : (json['scrapedDate'] ?? 'Recently'),
+      reviewStatus: reviewStatus,
+      rejectionReason: json['rejectionReason'],
+      officialUrl: json['officialUrl'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'organization': organization,
+      'source': source,
+      'location': location,
+      'lastDate': lastDate,
+      'vacancies': vacancies,
+      'qualification': qualification,
+      'salary': salary,
+      'scrapedDate': scrapedDate,
+      'reviewStatus': reviewStatus.name,
+      'rejectionReason': rejectionReason,
+      'officialUrl': officialUrl,
+    };
+  }
 }
+

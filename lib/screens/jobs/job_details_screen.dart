@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../data/app_state.dart';
 import '../../models/job.dart';
 import '../../models/user.dart';
+import '../../services/api_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/eligibility_badge.dart';
+import 'portal_screen.dart';
 
 class JobDetailsScreen extends StatefulWidget {
   final Job job;
@@ -18,6 +21,87 @@ class JobDetailsScreen extends StatefulWidget {
 }
 
 class _JobDetailsScreenState extends State<JobDetailsScreen> {
+  late Job _currentJob;
+  bool _isSummarizing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentJob = widget.job;
+  }
+
+  Future<void> _triggerAiSummary() async {
+    setState(() => _isSummarizing = true);
+    try {
+      final summary = await ApiService.instance.generateJobAiSummary(_currentJob.id);
+      if (summary != null) {
+        setState(() {
+          _currentJob = _currentJob.copyWith(
+            aiSummary: summary,
+            description: summary.executiveBrief.isNotEmpty ? summary.executiveBrief : _currentJob.description,
+          );
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✨ AI Summary and notification insights refreshed!'),
+              backgroundColor: Colors.teal,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) {
+        setState(() => _isSummarizing = false);
+      }
+    }
+  }
+
+  void _openPortal(String urlStr, {bool isPdf = false}) async {
+    String normalized = urlStr.trim();
+    if (normalized.isEmpty) {
+      normalized = widget.job.effectiveApplyUrl;
+    }
+    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+      normalized = 'https://$normalized';
+    }
+
+    // Try background direct launcher
+    try {
+      final uri = Uri.parse(normalized);
+      bool launched = false;
+      try {
+        launched = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+      } catch (_) {}
+
+      if (!launched) {
+        try {
+          launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } catch (_) {}
+      }
+
+      if (!launched) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (_) {}
+
+    // Also navigate to the dedicated In-App Official Portal Screen for immediate UI feedback
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OfficialPortalScreen(
+            job: widget.job,
+            targetUrl: normalized,
+            isNotificationPdf: isPdf,
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -79,7 +163,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    widget.job.jobType,
+                    _currentJob.jobType,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -95,7 +179,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    widget.job.vacancies,
+                    _currentJob.vacancies,
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -109,7 +193,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
 
             // Job Title
             Text(
-              widget.job.title,
+              _currentJob.title,
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -120,7 +204,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
 
             // Organization & Department
             Text(
-              widget.job.organization,
+              _currentJob.organization,
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
@@ -128,7 +212,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
               ),
             ),
             Text(
-              widget.job.department,
+              _currentJob.department,
               style: TextStyle(
                 fontSize: 13,
                 color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
@@ -146,16 +230,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
 
             const SizedBox(height: 24),
 
-            // Job Description
-            const Text(
-              'About the Notification',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              widget.job.description,
-              style: const TextStyle(fontSize: 14, height: 1.5),
-            ),
+            // AI Smart Summary & Insights Section
+            _buildAiSummarySection(context),
 
             const SizedBox(height: 24),
 
@@ -165,9 +241,9 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            _infoRow(Icons.calendar_month, 'Application Opens', widget.job.applicationStartDate),
-            _infoRow(Icons.event_busy, 'Last Date to Apply', widget.job.lastDate),
-            _infoRow(Icons.payment, 'Application Fee', widget.job.applicationFee),
+            _infoRow(Icons.calendar_month, 'Application Opens', _currentJob.applicationStartDate),
+            _infoRow(Icons.event_busy, 'Last Date to Apply', _currentJob.lastDate),
+            _infoRow(Icons.payment, 'Application Fee', _currentJob.applicationFee),
 
             const SizedBox(height: 24),
 
@@ -177,12 +253,12 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            _infoRow(Icons.school, 'Educational Qualification', widget.job.qualification),
-            _infoRow(Icons.menu_book, 'Course / Degree Allowed', widget.job.courseRequirements),
-            _infoRow(Icons.cake, 'Age Limit', '${widget.job.ageMin} to ${widget.job.ageMax} years'),
-            _infoRow(Icons.category, 'Categories Eligible', widget.job.category),
-            _infoRow(Icons.work_history, 'Experience Required', widget.job.experience),
-            _infoRow(Icons.assignment, 'Selection Process', widget.job.selectionProcess),
+            _infoRow(Icons.school, 'Educational Qualification', _currentJob.qualification),
+            _infoRow(Icons.menu_book, 'Course / Degree Allowed', _currentJob.courseRequirements),
+            _infoRow(Icons.cake, 'Age Limit', '${_currentJob.ageMin} to ${_currentJob.ageMax} years'),
+            _infoRow(Icons.category, 'Categories Eligible', _currentJob.category),
+            _infoRow(Icons.work_history, 'Experience Required', _currentJob.experience),
+            _infoRow(Icons.assignment, 'Selection Process', _currentJob.selectionProcess),
 
             const SizedBox(height: 24),
 
@@ -193,36 +269,10 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
 
             // Action Buttons
             CustomButton(
-              text: 'Apply Now (Official Portal)',
+              text: 'Apply Now (Direct Online Portal)',
               icon: Icons.open_in_new,
               onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Apply for Job'),
-                    content: Text(
-                      'You are navigating to the official application portal:\n\n${widget.job.officialNotificationUrl}\n\nMake sure to keep your documents and registration details ready.',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Cancel'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Opened portal: ${widget.job.officialNotificationUrl}'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        },
-                        child: const Text('Proceed to Portal'),
-                      ),
-                    ],
-                  ),
-                );
+                _openPortal(_currentJob.effectiveApplyUrl, isPdf: false);
               },
             ),
 
@@ -233,18 +283,218 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
               type: ButtonType.outlined,
               icon: Icons.picture_as_pdf_outlined,
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Downloading official notification from ${widget.job.organization}...'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                _openPortal(_currentJob.officialNotificationUrl, isPdf: true);
               },
             ),
 
             const SizedBox(height: 20),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAiSummarySection(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final summary = _currentJob.aiSummary;
+    final brief = (summary != null && summary.executiveBrief.isNotEmpty)
+        ? summary.executiveBrief
+        : (_currentJob.description.isNotEmpty
+            ? _currentJob.description
+            : 'Official notification released by ${_currentJob.organization} for ${_currentJob.title}.');
+
+    final highlights = (summary != null && summary.keyHighlights.isNotEmpty)
+        ? summary.keyHighlights
+        : [
+            '🏛️ Organization: ${_currentJob.organization} (${_currentJob.department})',
+            '🎓 Qualification: ${_currentJob.qualification}',
+            '💰 Remuneration: ${_currentJob.salary}',
+            '📍 Location: ${_currentJob.location}',
+            '⏳ Deadline: ${_currentJob.lastDate}',
+            '📋 Selection: ${_currentJob.selectionProcess}',
+          ];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
+            : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark
+              ? Colors.teal.shade700.withValues(alpha: 0.4)
+              : Colors.teal.shade300.withValues(alpha: 0.7),
+          width: 1.2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with AI Sparkle and Re-analyze button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.auto_awesome, size: 18, color: Colors.teal),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'AI Smart Summary & Insights',
+                    style: TextStyle(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              if (_isSummarizing)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 18, color: Colors.teal),
+                  tooltip: 'Re-Analyze with AI',
+                  onPressed: _triggerAiSummary,
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.zero,
+                ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          // Executive Brief Box
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.25)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.grey.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Text(
+              brief,
+              style: TextStyle(
+                fontSize: 13.5,
+                height: 1.5,
+                color: isDark ? Colors.grey.shade200 : const Color(0xFF1E293B),
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // Key Highlights Header
+          const Text(
+            'Key Highlights at a Glance',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Colors.teal,
+              letterSpacing: 0.2,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Key Highlights list
+          ...highlights.map((h) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
+                    Expanded(
+                      child: Text(
+                        h,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          height: 1.35,
+                          color: isDark ? Colors.grey.shade300 : const Color(0xFF334155),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+
+          if (summary != null && summary.examPattern.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 10),
+            const Text(
+              'Exam & Selection Scheme',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.teal),
+            ),
+            const SizedBox(height: 6),
+            ...summary.examPattern.map((p) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.check_circle_outline, size: 14, color: Colors.teal),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          p,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.grey.shade300 : const Color(0xFF334155),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+          ],
+
+          if (summary != null && summary.importantTips.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 10),
+            const Text(
+              'Application Guidelines & Tips',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.teal),
+            ),
+            const SizedBox(height: 6),
+            ...summary.importantTips.map((t) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.tips_and_updates_outlined, size: 14, color: Colors.amber),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          t,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.grey.shade300 : const Color(0xFF334155),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+          ],
+        ],
       ),
     );
   }

@@ -6,11 +6,11 @@ import '../../widgets/custom_text_field.dart';
 import '../home/home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
-  final String phoneNumber;
+  final String email;
 
   const RegisterScreen({
     super.key,
-    required this.phoneNumber,
+    required this.email,
   });
 
   @override
@@ -22,17 +22,91 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
   final TextEditingController dobController = TextEditingController();
-  final TextEditingController courseController = TextEditingController();
+  final TextEditingController otherCourseController = TextEditingController();
   final TextEditingController yearController = TextEditingController();
 
   String? selectedGender = 'Male';
   String? selectedQualification = 'Degree';
+  String? selectedCourse = 'BCA (Bachelor of Computer Applications)';
   String? selectedCategory = 'General';
   String? selectedState = 'Kerala';
   String? selectedDistrict = 'Ernakulam';
 
   bool _isLoading = false;
+  bool _obscurePassword = true;
+
+  static const Map<String, List<String>> qualificationCourses = {
+    'Post Graduate': [
+      'MCA (Master of Computer Applications)',
+      'M.Tech / M.E (Computer Science / IT)',
+      'M.Tech / M.E (Civil / Mechanical / Electrical / EC)',
+      'MBA (Master of Business Administration)',
+      'M.Sc Computer Science / Data Science / IT',
+      'M.Sc Mathematics / Statistics',
+      'M.Sc Physics / Chemistry',
+      'M.Sc Botany / Zoology / Life Sciences',
+      'M.Com (Finance / Taxation / Banking)',
+      'M.A Economics / English / History / Public Admin',
+      'MSW (Master of Social Work)',
+      'LL.M (Master of Laws)',
+      'MD / MS (Medical Postgraduate)',
+      'Other',
+    ],
+    'Degree': [
+      'BCA (Bachelor of Computer Applications)',
+      'B.Tech / B.E (Computer Science & Engineering)',
+      'B.Tech / B.E (Civil Engineering)',
+      'B.Tech / B.E (Mechanical Engineering)',
+      'B.Tech / B.E (Electrical & Electronics)',
+      'B.Tech / B.E (Electronics & Communication)',
+      'B.Sc Computer Science / IT / AI',
+      'B.Sc Mathematics / Statistics',
+      'B.Sc Physics / Chemistry',
+      'B.Sc Botany / Zoology / Agriculture',
+      'B.Sc Nursing',
+      'B.Com (Finance / Computer Applications / General)',
+      'BBA / BBM (Business Administration)',
+      'B.A Economics / Political Science / History',
+      'B.A English / Literature / Languages',
+      'B.Ed (Bachelor of Education)',
+      'LL.B (Bachelor of Laws)',
+      'MBBS / BDS / BAMS / BHMS',
+      'B.Pharm (Bachelor of Pharmacy)',
+      'B.Voc (Vocational Studies)',
+      'Other',
+    ],
+    'Diploma': [
+      'Diploma in Computer Engineering / IT',
+      'Diploma in Civil Engineering',
+      'Diploma in Mechanical Engineering',
+      'Diploma in Electrical & Electronics',
+      'Diploma in Electronics & Communication',
+      'Diploma in Automobile Engineering',
+      'Diploma in Pharmacy (D.Pharm)',
+      'Diploma in General Nursing & Midwifery (GNM)',
+      'Diploma in Medical Laboratory Technology (DMLT)',
+      'Diploma in Commercial Practice / Secretarial',
+      'Other',
+    ],
+    'Plus Two / 12th': [
+      'Higher Secondary - Science (Bio-Maths / PCMB)',
+      'Higher Secondary - Science (Computer Science)',
+      'Higher Secondary - Commerce (with Computer Applications / Maths)',
+      'Higher Secondary - Commerce (Cooperation)',
+      'Higher Secondary - Humanities / Arts',
+      'VHSE / Technical Higher Secondary',
+      'Other',
+    ],
+    'SSLC / 10th Pass': [
+      'General 10th Standard / SSLC Pass',
+      'CBSE Class 10 (Secondary School)',
+      'ICSE Class 10 (Secondary School)',
+      'ITI / Trade Certificate (Electrician, Fitter, Welder, COPA)',
+      'Other',
+    ],
+  };
 
   final Map<String, List<String>> _stateDistricts = {
     'Kerala': [
@@ -58,11 +132,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
   };
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.email.isNotEmpty) {
+      emailController.text = widget.email;
+    }
+    final initialCourses = qualificationCourses[selectedQualification] ?? [];
+    if (initialCourses.isNotEmpty) {
+      selectedCourse = initialCourses.first;
+    }
+  }
+
+  @override
   void dispose() {
     nameController.dispose();
     emailController.dispose();
+    passwordController.dispose();
     dobController.dispose();
-    courseController.dispose();
+    otherCourseController.dispose();
     yearController.dispose();
     super.dispose();
   }
@@ -96,24 +183,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 600));
+
+    final emailVal = emailController.text.trim().toLowerCase();
+    final nameVal = nameController.text.trim();
+    final passVal = passwordController.text.trim();
+    final effectiveCourse = selectedCourse == 'Other'
+        ? otherCourseController.text.trim()
+        : (selectedCourse ?? 'General');
+
+    final userMap = {
+      'name': nameVal,
+      'email': emailVal,
+      'password': passVal.isNotEmpty ? passVal : 'Password123',
+      'username': emailVal.split('@')[0],
+      'dob': dobController.text.trim(),
+      'gender': selectedGender ?? 'Male',
+      'qualification': selectedQualification ?? 'Degree',
+      'course': effectiveCourse,
+      'yearOfPassing': yearController.text.trim(),
+      'category': selectedCategory ?? 'General',
+      'state': selectedState ?? 'Kerala',
+      'district': selectedDistrict ?? 'Ernakulam',
+    };
 
     final newUser = User(
       id: 'user_${DateTime.now().millisecondsSinceEpoch}',
-      name: nameController.text.trim(),
-      phone: widget.phoneNumber,
-      email: emailController.text.trim(),
+      name: nameVal,
+      email: emailVal,
+      phone: '',
       dob: dobController.text.trim(),
       gender: selectedGender ?? 'Male',
       qualification: selectedQualification ?? 'Degree',
-      course: courseController.text.trim(),
+      course: effectiveCourse,
       yearOfPassing: yearController.text.trim(),
       category: selectedCategory ?? 'General',
       state: selectedState ?? 'Kerala',
       district: selectedDistrict ?? 'Ernakulam',
     );
 
-    appState.registerUser(newUser);
+    await appState.registerUserAsync(userMap);
+    if (appState.currentUser == null) {
+      appState.registerUser(newUser);
+    }
 
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -137,10 +248,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final availableDistricts = _stateDistricts[selectedState] ?? ['General'];
+    final availableCourses = qualificationCourses[selectedQualification] ?? ['General', 'Other'];
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Profile'),
+        title: const Text('Candidate Registration'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -151,7 +263,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Personal & Education Details',
+                  'Personal & Education Profile',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -159,33 +271,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'JobSense analyzes these details to show notifications for jobs you are eligible for.',
+                  'JobSense uses your profile criteria to match Kerala PSC, SSC, and UPSC job openings you are eligible for.',
                   style: TextStyle(
                     fontSize: 13,
                     color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
                   ),
                 ),
-                const SizedBox(height: 20),
-
-                // Phone (verified)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.verified, color: Colors.green.shade700, size: 20),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Verified Mobile: +91 ${widget.phoneNumber}',
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ),
-
                 const SizedBox(height: 20),
 
                 // Full Name
@@ -209,14 +300,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 CustomTextField(
                   controller: emailController,
                   label: 'Email Address',
-                  hint: 'e.g. rahul@example.com',
+                  hint: 'e.g. rahul.sharma@example.com',
+                  required: true,
                   keyboardType: TextInputType.emailAddress,
                   prefixIcon: const Icon(Icons.email_outlined),
                   validator: (val) {
-                    if (val != null && val.trim().isNotEmpty) {
-                      if (!val.contains('@') || !val.contains('.')) {
-                        return 'Enter a valid email address';
-                      }
+                    final trimmed = val?.trim() ?? '';
+                    if (trimmed.isEmpty) {
+                      return 'Please enter your email address';
+                    }
+                    if (!trimmed.contains('@') || !trimmed.contains('.')) {
+                      return 'Enter a valid email address';
+                    }
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                // Password
+                CustomTextField(
+                  controller: passwordController,
+                  label: 'Create Password',
+                  hint: 'At least 6 characters',
+                  required: true,
+                  obscureText: _obscurePassword,
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      size: 20,
+                    ),
+                    onPressed: () {
+                      setState(() => _obscurePassword = !_obscurePassword);
+                    },
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().length < 6) {
+                      return 'Password must be at least 6 characters';
                     }
                     return null;
                   },
@@ -266,31 +387,68 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   initialValue: selectedQualification,
                   decoration: const InputDecoration(),
                   items: const [
-                    DropdownMenuItem(value: 'Degree', child: Text('Degree / Graduation')),
                     DropdownMenuItem(value: 'Post Graduate', child: Text('Post Graduate / Master\'s')),
+                    DropdownMenuItem(value: 'Degree', child: Text('Degree / Graduation')),
+                    DropdownMenuItem(value: 'Diploma', child: Text('Polytechnic / Diploma')),
                     DropdownMenuItem(value: 'Plus Two / 12th', child: Text('Plus Two / 12th Pass')),
                     DropdownMenuItem(value: 'SSLC / 10th Pass', child: Text('SSLC / 10th Pass')),
-                    DropdownMenuItem(value: 'Diploma', child: Text('Polytechnic / Diploma')),
                   ],
-                  onChanged: (val) => setState(() => selectedQualification = val),
+                  onChanged: (val) {
+                    setState(() {
+                      selectedQualification = val;
+                      final courses = qualificationCourses[val] ?? ['Other'];
+                      selectedCourse = courses.contains(selectedCourse) ? selectedCourse : courses.first;
+                    });
+                  },
                 ),
 
                 const SizedBox(height: 16),
 
-                // Course / Degree
-                CustomTextField(
-                  controller: courseController,
-                  label: 'Course / Degree Name',
-                  hint: 'e.g. BCA, B.Tech CS, B.Com, B.Sc Maths',
-                  required: true,
-                  prefixIcon: const Icon(Icons.school_outlined),
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Please specify your degree or course';
-                    }
-                    return null;
+                // Course / Degree Dynamic Dropdown
+                _buildDropdownLabel('Course / Degree Discipline', required: true),
+                DropdownButtonFormField<String>(
+                  value: availableCourses.contains(selectedCourse) ? selectedCourse : availableCourses.first,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.school_outlined),
+                  ),
+                  isExpanded: true,
+                  items: availableCourses.map((c) {
+                    return DropdownMenuItem<String>(
+                      value: c,
+                      child: Text(
+                        c,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: c == 'Other' ? FontWeight.bold : FontWeight.normal,
+                          color: c == 'Other' ? theme.colorScheme.primary : null,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      selectedCourse = val;
+                    });
                   },
                 ),
+
+                // Additional Text Field if "Other" is selected
+                if (selectedCourse == 'Other') ...[
+                  const SizedBox(height: 14),
+                  CustomTextField(
+                    controller: otherCourseController,
+                    label: 'Specify Your Course / Degree',
+                    hint: 'e.g. B.Tech Artificial Intelligence, B.Sc Forensic Science',
+                    required: true,
+                    prefixIcon: const Icon(Icons.edit_note_outlined),
+                    validator: (val) {
+                      if (selectedCourse == 'Other' && (val == null || val.trim().isEmpty)) {
+                        return 'Please enter your course/degree name';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
 
                 const SizedBox(height: 16),
 

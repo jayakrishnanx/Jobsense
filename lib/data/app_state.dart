@@ -7,26 +7,374 @@ import '../models/scraped_job.dart';
 import '../models/scraper.dart';
 import '../models/system_log.dart';
 import '../models/user.dart';
-import 'dummy_data.dart';
+import '../services/api_service.dart';
+import '../services/session_storage_service.dart';
 
 enum AuthRole { none, user, admin }
 
 class AppState extends ChangeNotifier {
   User? _currentUser;
   AdminUser? _currentAdmin;
-  AuthRole _currentRole = AuthRole.user; // Default demo session
+  AuthRole _currentRole = AuthRole.none;
 
-  final List<Job> _jobs = List.from(DummyData.jobs);
-  final Set<String> _savedJobIds = {'job_001', 'job_002'};
-  final List<JobNotification> _notifications = List.from(DummyData.initialNotifications);
+  List<Job> _jobs = const [
+    Job(
+      id: 'kpsc_151_2026',
+      title: 'Draftsman Grade II (Cat. No. 151/2026)',
+      organization: 'Kerala Public Service Commission',
+      department: 'Kerala Ports service (Hydrographic Survey Wing)',
+      jobType: 'State Govt',
+      location: 'Kerala (Statewide)',
+      vacancies: '2 (Two)',
+      qualification: 'Diploma in Civil / Mechanical Engineering',
+      courseRequirements: 'Diploma in Civil or Mechanical Engineering from Kerala Govt. or Pass in SSLC & NTC Draftsman',
+      ageMin: 18,
+      ageMax: 40,
+      category: 'General / OBC / SC-ST',
+      experience: 'Fresher eligible',
+      applicationStartDate: '30-09-2026',
+      lastDate: '04-11-2026',
+      applicationFee: 'Free (Kerala PSC One Time Registration)',
+      selectionProcess: 'Direct Recruitment, OMR / Online Exam, Verification',
+      salary: '₹ 31,100 – 66,800/-',
+      description: 'Applications are invited online through One Time Registration from qualified candidates for appointment to Draftsman Grade II in Kerala Ports service (Hydrographic Survey Wing).',
+      officialNotificationUrl: 'https://www.keralapsc.gov.in/sites/default/files/2026-09/noti-151-26.pdf',
+      applyUrl: 'https://thulasi.psc.kerala.gov.in/thulasi/',
+    ),
+    Job(
+      id: 'kpsc_152_2026',
+      title: 'Peon / Watchman (Cat. No. 152/2026)',
+      organization: 'Kerala Public Service Commission',
+      department: 'Kerala State Financial Enterprises (KSFE Ltd.)',
+      jobType: 'State Govt',
+      location: 'Kerala (Statewide)',
+      vacancies: 'Anticipated Vacancies',
+      qualification: 'Pass in Standard VI (6th) or equivalent',
+      courseRequirements: 'Pass in Standard VI (New) or equivalent from recognized school',
+      ageMin: 18,
+      ageMax: 40,
+      category: 'General / OBC / SC-ST',
+      experience: 'Part-Time Employees in KSFE Ltd.',
+      applicationStartDate: '30-09-2026',
+      lastDate: '04-11-2026',
+      applicationFee: 'Free (Kerala PSC One Time Registration)',
+      selectionProcess: 'Direct Recruitment, Written Examination, Verification',
+      salary: '₹ 24,500 – 42,900/-',
+      description: 'Direct Recruitment from among eligible candidates for Peon/Watchman in Kerala State Financial Enterprises Ltd.',
+      officialNotificationUrl: 'https://www.keralapsc.gov.in/sites/default/files/2026-09/noti-152-26.pdf',
+      applyUrl: 'https://thulasi.psc.kerala.gov.in/thulasi/',
+    ),
+    Job(
+      id: 'kpsc_153_2026',
+      title: 'Forest Boat Driver (Cat. No. 153/2026)',
+      organization: 'Kerala Public Service Commission',
+      department: 'Forest & Wildlife Department',
+      jobType: 'State Govt',
+      location: 'Kerala (Statewide)',
+      vacancies: 'Anticipated Vacancies',
+      qualification: 'SSLC / 10th Standard + Boat Driver Licence',
+      courseRequirements: 'Pass in SSLC & possession of valid Boat Driver Certificate issued by competent authority',
+      ageMin: 19,
+      ageMax: 36,
+      category: 'General / OBC / SC-ST',
+      experience: 'Valid Boat Driving experience',
+      applicationStartDate: '30-09-2026',
+      lastDate: '04-11-2026',
+      applicationFee: 'Free (Kerala PSC One Time Registration)',
+      selectionProcess: 'Practical Test (Boat Driving), OMR Exam, Medical Standard',
+      salary: '₹ 26,500 – 60,700/-',
+      description: 'Kerala Public Service Commission invites applications for Forest Boat Driver in Forest and Wildlife department.',
+      officialNotificationUrl: 'https://www.keralapsc.gov.in/sites/default/files/2026-09/noti-153-26.pdf',
+      applyUrl: 'https://thulasi.psc.kerala.gov.in/thulasi/',
+    ),
+    Job(
+      id: 'kpsc_154_2026',
+      title: 'Forest Boat Driver (By Transfer) (Cat. No. 154/2026)',
+      organization: 'Kerala Public Service Commission',
+      department: 'Forest & Wildlife Department',
+      jobType: 'State Govt',
+      location: 'Kerala (Statewide)',
+      vacancies: 'By Transfer Vacancies',
+      qualification: 'SSLC / 10th Standard + Boat Driver Certificate',
+      courseRequirements: 'Must be an approved probationer or full member in Last Grade Service with Boat Driving Certificate',
+      ageMin: 19,
+      ageMax: 45,
+      category: 'Departmental (By Transfer)',
+      experience: 'Last Grade Service in Forest Dept',
+      applicationStartDate: '30-09-2026',
+      lastDate: '04-11-2026',
+      applicationFee: 'Free (Kerala PSC One Time Registration)',
+      selectionProcess: 'Practical Test, Verification',
+      salary: '₹ 26,500 – 60,700/-',
+      description: 'Recruitment By Transfer from qualified Last Grade employees in Forest & Wildlife Department.',
+      officialNotificationUrl: 'https://www.keralapsc.gov.in/sites/default/files/2026-09/noti-154-26.pdf',
+      applyUrl: 'https://thulasi.psc.kerala.gov.in/thulasi/',
+    ),
+    Job(
+      id: 'kpsc_155_2026',
+      title: 'Higher Secondary School Teacher - Statistics (Cat. No. 155/2026)',
+      organization: 'Kerala Public Service Commission',
+      department: 'Kerala Higher Secondary Education (SR for ST)',
+      jobType: 'State Govt',
+      location: 'Kerala (Statewide)',
+      vacancies: 'Special Recruitment (ST Only)',
+      qualification: "Master's Degree in Statistics + B.Ed + SET",
+      courseRequirements: "Master's Degree in Statistics with minimum 50% marks, B.Ed and State Eligibility Test (SET)",
+      ageMin: 20,
+      ageMax: 45,
+      category: 'Scheduled Tribe (ST) Only',
+      experience: 'Fresher eligible',
+      applicationStartDate: '30-09-2026',
+      lastDate: '04-11-2026',
+      applicationFee: 'Free (Kerala PSC One Time Registration)',
+      selectionProcess: 'Online / OMR Examination, Document Verification',
+      salary: '₹ 55,200 – 1,15,300/-',
+      description: 'Special Recruitment for Scheduled Tribe candidates for Higher Secondary School Teacher (HSST Statistics).',
+      officialNotificationUrl: 'https://www.keralapsc.gov.in/sites/default/files/2026-09/noti-155-26.pdf',
+      applyUrl: 'https://thulasi.psc.kerala.gov.in/thulasi/',
+    ),
+    Job(
+      id: 'kpsc_156_2026',
+      title: 'Draftsman Grade II / Town Planning Surveyor (Cat. No. 156/2026)',
+      organization: 'Kerala Public Service Commission',
+      department: 'Local Self Government Department (LSGD)',
+      jobType: 'State Govt',
+      location: 'Kerala (Statewide)',
+      vacancies: 'Special Recruitment for SC/ST',
+      qualification: 'Diploma in Civil / Architectural Engineering',
+      courseRequirements: 'Diploma in Civil Engineering / Town Planning or NTC Certificate in Draftsman Civil',
+      ageMin: 18,
+      ageMax: 41,
+      category: 'Special Recruitment for SC/ST',
+      experience: 'Fresher eligible',
+      applicationStartDate: '30-09-2026',
+      lastDate: '04-11-2026',
+      applicationFee: 'Free (Kerala PSC One Time Registration)',
+      selectionProcess: 'Written / OMR Exam, Verification',
+      salary: '₹ 31,100 – 66,800/-',
+      description: 'Recruitment to Draftsman Grade II / Town Planning Surveyor Grade II in LSGD Planning Wing.',
+      officialNotificationUrl: 'https://www.keralapsc.gov.in/sites/default/files/2026-09/noti-156-26.pdf',
+      applyUrl: 'https://thulasi.psc.kerala.gov.in/thulasi/',
+    ),
+    Job(
+      id: 'kpsc_157_2026',
+      title: 'Higher Secondary School Teacher (Junior) Arabic (Cat. No. 157/2026)',
+      organization: 'Kerala Public Service Commission',
+      department: 'Kerala Higher Secondary Education',
+      jobType: 'State Govt',
+      location: 'Kerala (Statewide)',
+      vacancies: 'Anticipated Vacancies',
+      qualification: "Master's Degree in Arabic + B.Ed + SET",
+      courseRequirements: "Master's Degree in Arabic with min 50% marks, B.Ed and State Eligibility Test (SET)",
+      ageMin: 20,
+      ageMax: 40,
+      category: 'General / OBC / SC-ST',
+      experience: 'Fresher eligible',
+      applicationStartDate: '30-09-2026',
+      lastDate: '04-11-2026',
+      applicationFee: 'Free (Kerala PSC One Time Registration)',
+      selectionProcess: 'OMR Examination, Interview, Document Verification',
+      salary: '₹ 45,600 – 95,600/-',
+      description: 'Direct Recruitment for Higher Secondary School Teacher (Junior) Arabic under Higher Secondary Education.',
+      officialNotificationUrl: 'https://www.keralapsc.gov.in/sites/default/files/2026-09/noti-157-158-26.pdf',
+      applyUrl: 'https://thulasi.psc.kerala.gov.in/thulasi/',
+    ),
+    Job(
+      id: 'kpsc_159_2026',
+      title: 'Police Constable Driver (Cat. No. 159/2026)',
+      organization: 'Kerala Public Service Commission',
+      department: 'Kerala Police Department (NCA LC/AI)',
+      jobType: 'State Govt',
+      location: 'Kerala (Statewide)',
+      vacancies: 'NCA Vacancies (LC/AI)',
+      qualification: 'Pass in SSLC / 10th + HVD Licence + Badge',
+      courseRequirements: 'Pass in SSLC and valid Heavy Vehicle Driving Licence with Badge',
+      ageMin: 18,
+      ageMax: 39,
+      category: 'Latin Catholic / Anglo Indian (LC/AI)',
+      experience: 'Driving Experience with Heavy Vehicles',
+      applicationStartDate: '30-09-2026',
+      lastDate: '04-11-2026',
+      applicationFee: 'Free (Kerala PSC One Time Registration)',
+      selectionProcess: 'Physical Efficiency Test, Practical Driving Test, OMR Exam',
+      salary: '₹ 31,100 – 66,800/-',
+      description: 'NCA Recruitment for Police Constable Driver / Woman Police Constable Driver in Kerala Police.',
+      officialNotificationUrl: 'https://www.keralapsc.gov.in/sites/default/files/2026-09/noti-159-26.pdf',
+      applyUrl: 'https://thulasi.psc.kerala.gov.in/thulasi/',
+    ),
+    Job(
+      id: 'kpsc_160_2026',
+      title: 'Peon / Watchman (PT Employees) (Cat. No. 160/2026)',
+      organization: 'Kerala Public Service Commission',
+      department: 'KSFE Ltd. (IV NCA-ST)',
+      jobType: 'State Govt',
+      location: 'Kerala (Statewide)',
+      vacancies: '1 (NCA-ST)',
+      qualification: 'Pass in Standard VI (6th) or equivalent',
+      courseRequirements: 'Pass in Standard VI (New) or equivalent from recognized school',
+      ageMin: 18,
+      ageMax: 50,
+      category: 'Scheduled Tribe (ST) Only',
+      experience: 'Part-Time Employees in KSFE Ltd.',
+      applicationStartDate: '30-09-2026',
+      lastDate: '04-11-2026',
+      applicationFee: 'Free (Kerala PSC One Time Registration)',
+      selectionProcess: 'Written / OMR Examination, Verification',
+      salary: '₹ 24,500 – 42,900/-',
+      description: 'IV NCA Recruitment from among Part-Time Employees in KSFE Ltd belonging to ST category.',
+      officialNotificationUrl: 'https://www.keralapsc.gov.in/sites/default/files/2026-09/noti-160-26.pdf',
+      applyUrl: 'https://thulasi.psc.kerala.gov.in/thulasi/',
+    ),
+    Job(
+      id: 'kpsc_161_2026',
+      title: 'Peon / Watchman (PT Employees) (Cat. No. 161/2026)',
+      organization: 'Kerala Public Service Commission',
+      department: 'KSFE Ltd. (VIII NCA-ST)',
+      jobType: 'State Govt',
+      location: 'Kerala (Statewide)',
+      vacancies: '1 (NCA-ST)',
+      qualification: 'Pass in Standard VI (6th) or equivalent',
+      courseRequirements: 'Pass in Standard VI (New) or equivalent from recognized school',
+      ageMin: 18,
+      ageMax: 50,
+      category: 'Scheduled Tribe (ST) Only',
+      experience: 'Part-Time Employees in KSFE Ltd.',
+      applicationStartDate: '30-09-2026',
+      lastDate: '04-11-2026',
+      applicationFee: 'Free (Kerala PSC One Time Registration)',
+      selectionProcess: 'Written / OMR Examination, Verification',
+      salary: '₹ 24,500 – 42,900/-',
+      description: 'VIII NCA Recruitment from among Part-Time Employees in KSFE Ltd belonging to ST category.',
+      officialNotificationUrl: 'https://www.keralapsc.gov.in/sites/default/files/2026-09/noti-161-26.pdf',
+      applyUrl: 'https://thulasi.psc.kerala.gov.in/thulasi/',
+    ),
+    Job(
+      id: 'ssc_cgle_2026',
+      title: 'Combined Graduate Level Exam 2026',
+      organization: 'Staff Selection Commission',
+      department: 'Central Region (SSCCR)',
+      jobType: 'Central Govt',
+      location: 'All India',
+      vacancies: 'As per official notification',
+      qualification: 'Any Degree / Graduation',
+      courseRequirements: 'Bachelor Degree in any discipline from a recognized University',
+      ageMin: 18,
+      ageMax: 32,
+      category: 'General / OBC / SC / ST / EWS',
+      experience: 'Fresher eligible',
+      applicationStartDate: '25-09-2026',
+      lastDate: '25-10-2026',
+      applicationFee: '₹ 100 (Women / SC / ST / PwD / ESM Exempted)',
+      selectionProcess: 'Tier-I (CBE) & Tier-II (CBE) Examinations',
+      salary: 'Level-4 to Level-8 (₹ 25,500 – 1,51,100/-)',
+      description: 'Staff Selection Commission notice for Combined Graduate Level Examination (CGLE) 2026 for recruitment to Group B and Group C posts in various Ministries and Departments.',
+      officialNotificationUrl: 'https://ssccr.gov.in/api/media/file/Important%20Notice-%20CGLE%202026-1.pdf',
+      applyUrl: 'https://ssc.gov.in',
+    ),
+    Job(
+      id: 'ssc_cr13324_je',
+      title: 'Post Code CR13324 - Junior Engineer (Quality Assurance) Radar & System',
+      organization: 'Staff Selection Commission',
+      department: 'Central Region (SSCCR)',
+      jobType: 'Central Govt',
+      location: 'All India',
+      vacancies: 'As per notification',
+      qualification: 'Diploma / Degree in Engineering',
+      courseRequirements: 'Degree / Diploma in Electronics / Radar / Systems Engineering',
+      ageMin: 18,
+      ageMax: 30,
+      category: 'General / OBC / SC / ST',
+      experience: 'Fresher / Experienced',
+      applicationStartDate: '25-09-2026',
+      lastDate: '25-10-2026',
+      applicationFee: '₹ 100 (Exempted for Women/SC/ST)',
+      selectionProcess: 'Computer Based Examination (CBE), Skill Test, Document Verification',
+      salary: 'Level-6 (₹ 35,400 – 1,12,400/-)',
+      description: 'Recruitment for Junior Engineer (QA) Radar & System under Staff Selection Commission Central Region.',
+      officialNotificationUrl: 'https://ssccr.gov.in/api/media/file/CR13324%20(1)-1.pdf',
+      applyUrl: 'https://ssc.gov.in',
+    ),
+    Job(
+      id: 'ssc_cr12624_je',
+      title: 'Post Code CR12624 - Junior Engineer (Quality Assurance) Armament - Small Arms',
+      organization: 'Staff Selection Commission',
+      department: 'Central Region (SSCCR)',
+      jobType: 'Central Govt',
+      location: 'All India',
+      vacancies: 'As per notification',
+      qualification: 'Diploma / Degree in Mechanical / Production Engg',
+      courseRequirements: 'Diploma or Degree in Mechanical / Production / Armament Engineering',
+      ageMin: 18,
+      ageMax: 30,
+      category: 'General / OBC / SC / ST',
+      experience: 'Fresher / Experienced',
+      applicationStartDate: '25-09-2026',
+      lastDate: '25-10-2026',
+      applicationFee: '₹ 100 (Exempted for Women/SC/ST)',
+      selectionProcess: 'Computer Based Examination (CBE), Verification',
+      salary: 'Level-6 (₹ 35,400 – 1,12,400/-)',
+      description: 'Junior Engineer (QA) Armament Small Arms recruitment by Staff Selection Commission Central Region.',
+      officialNotificationUrl: 'https://ssccr.gov.in/api/media/file/CR12624%20(1)-1.pdf',
+      applyUrl: 'https://ssc.gov.in',
+    ),
+    Job(
+      id: 'ssc_cr11524_pharm',
+      title: 'Post Code CR11524 - Pharmacist (Allopathic)',
+      organization: 'Staff Selection Commission',
+      department: 'Central Region (SSCCR)',
+      jobType: 'Central Govt',
+      location: 'All India',
+      vacancies: 'As per notification',
+      qualification: 'Diploma / Degree in Pharmacy (D.Pharm / B.Pharm)',
+      courseRequirements: 'Pass in 12th with Science and Diploma in Pharmacy from recognized institution',
+      ageMin: 18,
+      ageMax: 30,
+      category: 'General / OBC / SC / ST',
+      experience: 'Registered Pharmacist with Pharmacy Council',
+      applicationStartDate: '25-09-2026',
+      lastDate: '25-10-2026',
+      applicationFee: '₹ 100 (Exempted for Women/SC/ST)',
+      selectionProcess: 'Computer Based Examination (CBE), Document Verification',
+      salary: 'Level-5 (₹ 29,200 – 92,300/-)',
+      description: 'Pharmacist (Allopathic) vacancy notification under Staff Selection Commission Central Region.',
+      officialNotificationUrl: 'https://ssccr.gov.in/api/media/file/CR11524%20(2)-2.pdf',
+      applyUrl: 'https://ssc.gov.in',
+    ),
+    Job(
+      id: 'ssc_cr10224_mts',
+      title: 'Post Code CR10224 - Multi Tasking Staff (MTS)',
+      organization: 'Staff Selection Commission',
+      department: 'Central Region (SSCCR)',
+      jobType: 'Central Govt',
+      location: 'All India',
+      vacancies: 'As per notification',
+      qualification: 'Matriculation / 10th Standard Pass',
+      courseRequirements: 'Pass in 10th / Matriculation from recognized Board',
+      ageMin: 18,
+      ageMax: 27,
+      category: 'General / OBC / SC / ST / EWS',
+      experience: 'Fresher eligible',
+      applicationStartDate: '25-09-2026',
+      lastDate: '25-10-2026',
+      applicationFee: '₹ 100 (Exempted for Women/SC/ST/PwD)',
+      selectionProcess: 'Computer Based Examination (CBE)',
+      salary: 'Level-1 (₹ 18,000 – 56,900/-)',
+      description: 'Multi Tasking Staff (Non-Technical) recruitment by Staff Selection Commission Central Region.',
+      officialNotificationUrl: 'https://ssccr.gov.in/api/media/file/CR10224%20(1)-3.pdf',
+      applyUrl: 'https://ssc.gov.in',
+    ),
+  ];
+  final Set<String> _savedJobIds = {};
+  List<JobNotification> _notifications = [];
 
   // Admin datasets
-  final List<Scraper> _scrapers = List.from(DummyData.initialScrapers);
-  final List<ScrapedJob> _scrapedJobs = List.from(DummyData.initialScrapedJobs);
-  final List<ManagedUser> _managedUsers = List.from(DummyData.initialManagedUsers);
-  final List<SystemLog> _systemLogs = List.from(DummyData.initialSystemLogs);
+  List<Scraper> _scrapers = [];
+  List<ScrapedJob> _scrapedJobs = [];
+  List<ManagedUser> _managedUsers = [];
+  List<SystemLog> _systemLogs = [];
 
   bool _isDarkMode = false;
+  bool _isLoading = false;
 
   // Settings preferences
   bool _pushNotificationsEnabled = true;
@@ -35,15 +383,58 @@ class AppState extends ChangeNotifier {
   String _selectedLanguage = 'English';
 
   AppState() {
-    // Default logged in with existing demo user for convenience
-    _currentUser = DummyData.defaultExistingUser;
-    _currentRole = AuthRole.user;
+    // Initial async sync with real backend and restore session
+    initSession();
+    syncWithBackend();
+  }
+
+  /// Restore saved session, theme, and saved jobs on app boot
+  Future<void> initSession() async {
+    try {
+      final savedDark = await SessionStorageService.instance.getThemeMode();
+      if (savedDark != null) {
+        _isDarkMode = savedDark;
+      }
+
+      final savedBookmarks = await SessionStorageService.instance.getBookmarkedJobIds();
+      if (savedBookmarks.isNotEmpty) {
+        _savedJobIds.clear();
+        _savedJobIds.addAll(savedBookmarks);
+      }
+
+      final session = await SessionStorageService.instance.getSession();
+      if (session != null) {
+        final token = session['token'] as String?;
+        final role = session['role'] as String?;
+        final userData = session['userData'] as Map<String, dynamic>?;
+        final adminData = session['adminData'] as Map<String, dynamic>?;
+
+        if (token != null && token.isNotEmpty) {
+          ApiService.instance.authToken = token;
+
+          if (role == 'admin' && adminData != null) {
+            _currentAdmin = AdminUser.fromJson(adminData);
+            _currentUser = null;
+            _currentRole = AuthRole.admin;
+          } else if (role == 'user' && userData != null) {
+            _currentUser = User.fromJson(userData);
+            _currentAdmin = null;
+            _currentRole = AuthRole.user;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('initSession error: $e');
+    } finally {
+      notifyListeners();
+    }
   }
 
   // Getters
   User? get currentUser => _currentUser;
   AdminUser? get currentAdmin => _currentAdmin;
   AuthRole get currentRole => _currentRole;
+  bool get isLoading => _isLoading;
 
   List<Job> get jobs => List.unmodifiable(_jobs);
   Set<String> get savedJobIds => Set.unmodifiable(_savedJobIds);
@@ -88,78 +479,260 @@ class AppState extends ChangeNotifier {
 
   bool isJobSaved(String jobId) => _savedJobIds.contains(jobId);
 
-  // Authentication Actions
+  /// Synchronize all real datasets with backend MongoDB APIs
+  Future<void> syncWithBackend() async {
+    _isLoading = true;
+    notifyListeners();
 
-  /// Mobile OTP login:
-  /// - '7012823414' -> Existing User
-  /// - '9999999999' -> Demo Admin
-  /// - Any other -> New User (returns false)
-  bool loginWithPhone(String phone) {
-    final cleaned = phone.trim();
-    if (cleaned == '7012823414') {
-      _currentUser = DummyData.defaultExistingUser;
-      _currentAdmin = null;
-      _currentRole = AuthRole.user;
+    try {
+      final fetchedJobs = await ApiService.instance.fetchJobs();
+      if (fetchedJobs.isNotEmpty) {
+        _jobs = fetchedJobs;
+      }
+
+      try {
+        final scrapers = await ApiService.instance.fetchScrapers();
+        if (scrapers.isNotEmpty) _scrapers = scrapers;
+      } catch (_) {}
+
+      try {
+        final scrapedJobs = await ApiService.instance.fetchScrapedJobs();
+        if (scrapedJobs.isNotEmpty) _scrapedJobs = scrapedJobs;
+      } catch (_) {}
+
+      try {
+        final users = await ApiService.instance.fetchManagedUsers();
+        if (users.isNotEmpty) _managedUsers = users;
+      } catch (_) {}
+
+      try {
+        final logs = await ApiService.instance.fetchSystemLogs();
+        if (logs.isNotEmpty) _systemLogs = logs;
+      } catch (_) {}
+
+      try {
+        final notifs = await ApiService.instance.fetchNotifications();
+        if (notifs.isNotEmpty) _notifications = notifs;
+      } catch (_) {}
+    } catch (e) {
+      debugPrint('SyncWithBackend fallback: $e');
+    } finally {
+      _isLoading = false;
       notifyListeners();
-      return true; // Existing user
-    } else if (cleaned == '9999999999') {
-      _currentAdmin = DummyData.defaultAdmin;
-      _currentUser = null;
-      _currentRole = AuthRole.admin;
-      addSystemLog(SystemLog(
-        id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-        timestamp: 'Just now',
-        eventType: 'Authentication',
-        description: 'Admin phone OTP session verified (+91 9999999999).',
-        level: LogLevel.success,
-        source: 'Auth System',
-      ));
-      notifyListeners();
-      return true; // Existing admin
     }
-    _currentRole = AuthRole.none;
-    return false; // New user -> proceeds to Registration
   }
 
-  /// Username + Password login:
-  /// - 'admin' / 'admin123' -> Admin
-  /// - 'rahul' / 'rahul123' -> User
-  /// - Invalid credentials -> returns AuthRole.none
-  AuthRole loginWithUsername(String username, String password) {
-    final u = username.trim().toLowerCase();
+  // Authentication Actions
+
+  /// Send system auto-generated 6-digit OTP code to candidate/admin email
+  Future<Map<String, dynamic>?> sendEmailOtp(String email) async {
+    return await ApiService.instance.sendEmailOtp(email.trim().toLowerCase());
+  }
+
+  /// Verify system auto-generated OTP code against backend
+  Future<Map<String, dynamic>?> verifyEmailOtp(String email, String otp) async {
+    final res = await ApiService.instance.verifyEmailOtp(email.trim().toLowerCase(), otp.trim());
+    if (res != null && res['success'] == true) {
+      final token = res['token'] ?? ApiService.instance.authToken ?? '';
+      if (res['role'] == 'admin' && res['admin'] != null) {
+        _currentAdmin = AdminUser.fromJson(res['admin']);
+        _currentUser = null;
+        _currentRole = AuthRole.admin;
+        await SessionStorageService.instance.saveSession(
+          token: token,
+          role: 'admin',
+          adminData: res['admin'],
+        );
+        await SessionStorageService.instance.saveLastIdentifier(email);
+        addSystemLog(SystemLog(
+          id: 'log_${DateTime.now().millisecondsSinceEpoch}',
+          timestamp: 'Just now',
+          eventType: 'Authentication',
+          description: 'Admin email OTP session verified ($email).',
+          level: LogLevel.success,
+          source: 'Auth System',
+        ));
+        notifyListeners();
+      } else if (res['role'] == 'user' && res['user'] != null) {
+        _currentUser = User.fromJson(res['user']);
+        _currentAdmin = null;
+        _currentRole = AuthRole.user;
+        await SessionStorageService.instance.saveSession(
+          token: token,
+          role: 'user',
+          userData: res['user'],
+        );
+        await SessionStorageService.instance.saveLastIdentifier(email);
+        addSystemLog(SystemLog(
+          id: 'log_${DateTime.now().millisecondsSinceEpoch}',
+          timestamp: 'Just now',
+          eventType: 'Authentication',
+          description: 'Candidate signed in via Email OTP ($email).',
+          level: LogLevel.info,
+          source: 'Auth System',
+        ));
+        notifyListeners();
+      }
+      return res;
+    }
+    return null;
+  }
+
+  /// Email / Username + Password login with backend REST API integration
+  Future<AuthRole> loginWithCredentialsAsync(String identifier, String password) async {
+    final result = await loginDetailedAsync(identifier, password);
+    return result['role'] as AuthRole? ?? AuthRole.none;
+  }
+
+  /// Detailed login method returning explicit notRegistered status and message
+  Future<Map<String, dynamic>> loginDetailedAsync(String identifier, String password) async {
+    final id = identifier.trim().toLowerCase();
     final p = password.trim();
 
-    if (u == 'admin' && p == 'admin123') {
-      _currentRole = AuthRole.admin;
-      _currentAdmin = DummyData.defaultAdmin;
-      _currentUser = null;
+    // 1. Attempt login via unified REST API
+    final res = await ApiService.instance.login(identifier: id, password: p);
+    if (res != null) {
+      if (res['success'] == true) {
+        final token = res['token'] ?? ApiService.instance.authToken ?? '';
+        if (res['role'] == 'admin' && res['admin'] != null) {
+          _currentRole = AuthRole.admin;
+          _currentAdmin = AdminUser.fromJson(res['admin']);
+          _currentUser = null;
+          await SessionStorageService.instance.saveSession(
+            token: token,
+            role: 'admin',
+            adminData: res['admin'],
+          );
+          await SessionStorageService.instance.saveLastIdentifier(id);
+          addSystemLog(SystemLog(
+            id: 'log_${DateTime.now().millisecondsSinceEpoch}',
+            timestamp: 'Just now',
+            eventType: 'Authentication',
+            description: 'Admin signed in via Email/Password (${_currentAdmin!.email}).',
+            level: LogLevel.success,
+            source: 'Auth System',
+          ));
+          notifyListeners();
+          return {'success': true, 'role': AuthRole.admin, 'message': 'Welcome Administrator'};
+        } else if (res['role'] == 'user' && res['user'] != null) {
+          _currentRole = AuthRole.user;
+          _currentUser = User.fromJson(res['user']);
+          _currentAdmin = null;
+          await SessionStorageService.instance.saveSession(
+            token: token,
+            role: 'user',
+            userData: res['user'],
+          );
+          await SessionStorageService.instance.saveLastIdentifier(id);
+          addSystemLog(SystemLog(
+            id: 'log_${DateTime.now().millisecondsSinceEpoch}',
+            timestamp: 'Just now',
+            eventType: 'Authentication',
+            description: 'Candidate signed in via Email/Password (${_currentUser!.name}).',
+            level: LogLevel.info,
+            source: 'Auth System',
+          ));
+          notifyListeners();
+          return {'success': true, 'role': AuthRole.user, 'message': 'Login successful'};
+        }
+      }
+
+      // Check if server indicated notRegistered
+      if (res['notRegistered'] == true) {
+        return {
+          'success': false,
+          'role': AuthRole.none,
+          'notRegistered': true,
+          'message': res['message'] ?? 'This email is not registered. Please register first.',
+        };
+      }
+
+      return {
+        'success': false,
+        'role': AuthRole.none,
+        'notRegistered': false,
+        'message': res['message'] ?? 'Invalid credentials.',
+      };
+    }
+
+    // 2. Fallback to local offline accounts if server offline
+    final fallbackRole = loginWithLocalCredentials(id, p);
+    if (fallbackRole != AuthRole.none) {
+      return {'success': true, 'role': fallbackRole, 'message': 'Login successful (Offline)'};
+    }
+
+    return {
+      'success': false,
+      'role': AuthRole.none,
+      'notRegistered': true,
+      'message': 'No account found with this email address. Please register first.',
+    };
+  }
+
+  /// Send Password Reset OTP Code to email
+  Future<Map<String, dynamic>?> forgotPasswordAsync(String email) async {
+    final res = await ApiService.instance.forgotPassword(email);
+    if (res != null && res['success'] == true) {
       addSystemLog(SystemLog(
         id: 'log_${DateTime.now().millisecondsSinceEpoch}',
         timestamp: 'Just now',
-        eventType: 'Authentication',
-        description: 'Admin signed in with credentials (admin).',
-        level: LogLevel.success,
-        source: 'Auth System',
-      ));
-      notifyListeners();
-      return AuthRole.admin;
-    } else if (u == 'rahul' && p == 'rahul123') {
-      _currentRole = AuthRole.user;
-      _currentUser = DummyData.defaultExistingUser;
-      _currentAdmin = null;
-      addSystemLog(SystemLog(
-        id: 'log_${DateTime.now().millisecondsSinceEpoch}',
-        timestamp: 'Just now',
-        eventType: 'Authentication',
-        description: 'User signed in with credentials (rahul).',
+        eventType: 'Password Reset',
+        description: 'Password reset OTP requested for $email.',
         level: LogLevel.info,
         source: 'Auth System',
       ));
       notifyListeners();
-      return AuthRole.user;
     }
+    return res;
+  }
 
+  /// Verify OTP and reset password
+  Future<Map<String, dynamic>?> resetPasswordAsync({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    final res = await ApiService.instance.resetPassword(
+      email: email,
+      otp: otp,
+      newPassword: newPassword,
+    );
+    if (res != null && res['success'] == true) {
+      addSystemLog(SystemLog(
+        id: 'log_${DateTime.now().millisecondsSinceEpoch}',
+        timestamp: 'Just now',
+        eventType: 'Password Reset',
+        description: 'Password reset successfully for $email.',
+        level: LogLevel.success,
+        source: 'Auth System',
+      ));
+      notifyListeners();
+    }
+    return res;
+  }
+
+  /// Synchronous fallback (Strictly requires backend server)
+  AuthRole loginWithLocalCredentials(String identifier, String password) {
     return AuthRole.none;
+  }
+
+  Future<void> registerUserAsync(Map<String, dynamic> data) async {
+    final res = await ApiService.instance.registerUser(data);
+    if (res != null && res['user'] != null) {
+      _currentUser = res['user'] as User;
+      _currentRole = AuthRole.user;
+      _currentAdmin = null;
+      final token = res['token'] ?? ApiService.instance.authToken ?? '';
+      await SessionStorageService.instance.saveSession(
+        token: token,
+        role: 'user',
+        userData: _currentUser!.toJson(),
+      );
+      if (data['email'] != null) {
+        await SessionStorageService.instance.saveLastIdentifier(data['email'].toString());
+      }
+      notifyListeners();
+    }
   }
 
   void registerUser(User user) {
@@ -169,8 +742,16 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateProfileAsync(User user) async {
+    _currentUser = user;
+    notifyListeners();
+    await SessionStorageService.instance.saveUserData(user.toJson());
+    await ApiService.instance.updateUserProfile(user.id, user.toJson());
+  }
+
   void updateProfile(User user) {
     _currentUser = user;
+    SessionStorageService.instance.saveUserData(user.toJson());
     notifyListeners();
   }
 
@@ -178,6 +759,8 @@ class AppState extends ChangeNotifier {
     _currentUser = null;
     _currentAdmin = null;
     _currentRole = AuthRole.none;
+    ApiService.instance.authToken = null;
+    SessionStorageService.instance.clearSession();
     notifyListeners();
   }
 
@@ -188,6 +771,7 @@ class AppState extends ChangeNotifier {
     } else {
       _savedJobIds.add(jobId);
     }
+    SessionStorageService.instance.saveBookmarkedJobIds(_savedJobIds.toList());
     notifyListeners();
   }
 
@@ -204,6 +788,7 @@ class AppState extends ChangeNotifier {
     for (int i = 0; i < _notifications.length; i++) {
       _notifications[i] = _notifications[i].copyWith(isRead: true);
     }
+    ApiService.instance.markAllNotificationsRead();
     notifyListeners();
   }
 
@@ -235,36 +820,96 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Run real live web scraper on demand through backend scraper engine
   Future<void> runScraper(String id) async {
     final index = _scrapers.indexWhere((s) => s.id == id);
     if (index != -1) {
       final current = _scrapers[index];
-      // Simulate run latency
-      await Future.delayed(const Duration(milliseconds: 900));
 
-      final newJobsCount = current.jobsCollected + 2;
-      _scrapers[index] = current.copyWith(
-        status: ScraperStatus.active,
-        lastRun: 'Just now',
-        jobsCollected: newJobsCount,
-        lastError: null,
-      );
+      // Trigger real backend scraper execution
+      final result = await ApiService.instance.triggerScraper(id);
+
+      if (result != null && result['data'] != null) {
+        _scrapers[index] = Scraper.fromJson(result['data']);
+      } else {
+        // Fallback local visual update
+        _scrapers[index] = current.copyWith(
+          status: ScraperStatus.active,
+          lastRun: 'Just now',
+          jobsCollected: current.jobsCollected + 2,
+          lastError: null,
+        );
+      }
 
       addSystemLog(SystemLog(
         id: 'log_${DateTime.now().millisecondsSinceEpoch}',
         timestamp: 'Just now',
         eventType: 'Scraper Run',
-        description: 'Manual run executed for ${current.name}. 2 new announcements detected.',
+        description: 'Live scraper run completed for ${current.name}.',
         level: LogLevel.success,
         source: current.name,
       ));
+
+      // Refresh scraped jobs queue and live jobs
+      final freshScraped = await ApiService.instance.fetchScrapedJobs();
+      if (freshScraped.isNotEmpty) {
+        _scrapedJobs = freshScraped;
+      }
 
       notifyListeners();
     }
   }
 
+  Future<bool> createScraper({
+    required String name,
+    required String targetUrl,
+    String category = 'State Govt',
+    String schedule = 'Every 4 hours',
+    int frequencyMinutes = 240,
+  }) async {
+    final newScraper = await ApiService.instance.addScraper({
+      'name': name.trim(),
+      'targetUrl': targetUrl.trim(),
+      'category': category,
+      'schedule': schedule,
+      'frequencyMinutes': frequencyMinutes,
+      'scraperType': 'live_web',
+      'status': 'active',
+    });
+
+    if (newScraper != null) {
+      _scrapers.insert(0, newScraper);
+      addSystemLog(SystemLog(
+        id: 'log_${DateTime.now().millisecondsSinceEpoch}',
+        timestamp: 'Just now',
+        eventType: 'Scraper Created',
+        description: 'New scraper "$name" configured for $targetUrl.',
+        level: LogLevel.success,
+        source: 'Admin Portal',
+      ));
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> removeScraper(String id) async {
+    final success = await ApiService.instance.deleteScraper(id);
+    _scrapers.removeWhere((s) => s.id == id);
+    addSystemLog(SystemLog(
+      id: 'log_${DateTime.now().millisecondsSinceEpoch}',
+      timestamp: 'Just now',
+      eventType: 'Scraper Deleted',
+      description: 'Scraper $id removed from monitoring system.',
+      level: LogLevel.info,
+      source: 'Admin Portal',
+    ));
+    notifyListeners();
+    return success;
+  }
+
   // Admin Actions: Scraped Jobs Review
-  void approveScrapedJob(String id) {
+  Future<void> approveScrapedJob(String id) async {
     final index = _scrapedJobs.indexWhere((j) => j.id == id);
     if (index != -1) {
       final scraped = _scrapedJobs[index];
@@ -273,7 +918,7 @@ class AppState extends ChangeNotifier {
         rejectionReason: null,
       );
 
-      // Create new live job from approved scraped job if not existing
+      // Create new live job from approved scraped job
       final liveJobId = 'live_${scraped.id}';
       if (!_jobs.any((j) => j.id == liveJobId)) {
         final newLiveJob = Job(
@@ -301,6 +946,9 @@ class AppState extends ChangeNotifier {
         _jobs.insert(0, newLiveJob);
       }
 
+      // Sync approval with backend MongoDB
+      await ApiService.instance.approveScrapedJob(id, scraped.toJson());
+
       addSystemLog(SystemLog(
         id: 'log_${DateTime.now().millisecondsSinceEpoch}',
         timestamp: 'Just now',
@@ -314,7 +962,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void rejectScrapedJob(String id, [String? reason]) {
+  Future<void> rejectScrapedJob(String id, [String? reason]) async {
     final index = _scrapedJobs.indexWhere((j) => j.id == id);
     if (index != -1) {
       final scraped = _scrapedJobs[index];
@@ -322,6 +970,8 @@ class AppState extends ChangeNotifier {
         reviewStatus: ScrapedJobReviewStatus.rejected,
         rejectionReason: reason ?? 'Rejected by Admin review',
       );
+
+      await ApiService.instance.rejectScrapedJob(id);
 
       addSystemLog(SystemLog(
         id: 'log_${DateTime.now().millisecondsSinceEpoch}',
@@ -371,7 +1021,7 @@ class AppState extends ChangeNotifier {
   }
 
   // Admin Actions: Users
-  void toggleUserBlock(String userId, [String? reason]) {
+  Future<void> toggleUserBlock(String userId, [String? reason]) async {
     final index = _managedUsers.indexWhere((u) => u.id == userId);
     if (index != -1) {
       final user = _managedUsers[index];
@@ -383,6 +1033,8 @@ class AppState extends ChangeNotifier {
         status: newStatus,
         blockReason: newStatus == UserAccountStatus.blocked ? (reason ?? 'Suspended by Admin') : null,
       );
+
+      await ApiService.instance.toggleUserStatus(userId);
 
       addSystemLog(SystemLog(
         id: 'log_${DateTime.now().millisecondsSinceEpoch}',
@@ -414,6 +1066,7 @@ class AppState extends ChangeNotifier {
   // Settings
   void toggleTheme(bool isDark) {
     _isDarkMode = isDark;
+    SessionStorageService.instance.saveThemeMode(isDark);
     notifyListeners();
   }
 

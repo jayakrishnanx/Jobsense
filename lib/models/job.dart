@@ -24,6 +24,51 @@ class EligibilityResult {
   });
 }
 
+class AiSummaryData {
+  final String executiveBrief;
+  final List<String> keyHighlights;
+  final String eligibilityOverview;
+  final List<String> examPattern;
+  final List<String> importantTips;
+  final String model;
+  final bool isAiGenerated;
+
+  const AiSummaryData({
+    this.executiveBrief = '',
+    this.keyHighlights = const [],
+    this.eligibilityOverview = '',
+    this.examPattern = const [],
+    this.importantTips = const [],
+    this.model = 'JobSense-AI',
+    this.isAiGenerated = true,
+  });
+
+  factory AiSummaryData.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const AiSummaryData(isAiGenerated: false);
+    return AiSummaryData(
+      executiveBrief: json['executiveBrief']?.toString() ?? '',
+      keyHighlights: (json['keyHighlights'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      eligibilityOverview: json['eligibilityOverview']?.toString() ?? '',
+      examPattern: (json['examPattern'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      importantTips: (json['importantTips'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      model: json['model']?.toString() ?? 'JobSense-AI',
+      isAiGenerated: json['isAiGenerated'] == true || (json['executiveBrief'] != null && json['executiveBrief'].toString().isNotEmpty),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'executiveBrief': executiveBrief,
+      'keyHighlights': keyHighlights,
+      'eligibilityOverview': eligibilityOverview,
+      'examPattern': examPattern,
+      'importantTips': importantTips,
+      'model': model,
+      'isAiGenerated': isAiGenerated,
+    };
+  }
+}
+
 class Job {
   final String id;
   final String title;
@@ -45,6 +90,8 @@ class Job {
   final String salary;
   final String description;
   final String officialNotificationUrl;
+  final String applyUrl;
+  final AiSummaryData? aiSummary;
 
   const Job({
     required this.id,
@@ -67,7 +114,170 @@ class Job {
     required this.salary,
     required this.description,
     required this.officialNotificationUrl,
+    this.applyUrl = '',
+    this.aiSummary,
   });
+
+  /// Smart resolver for the direct candidate application portal
+  String get effectiveApplyUrl {
+    if (applyUrl.trim().isNotEmpty) {
+      return applyUrl.trim();
+    }
+    final org = organization.toLowerCase();
+    final tit = title.toLowerCase();
+
+    if (org.contains('kerala psc') || tit.contains('kerala psc') || tit.contains('kpsc')) {
+      return 'https://thulasi.psc.kerala.gov.in/thulasi/';
+    }
+    if (org.contains('staff selection') || tit.contains('ssc') || org.contains('ssc')) {
+      return 'https://ssc.gov.in/login';
+    }
+    if (org.contains('upsc') || tit.contains('upsc') || org.contains('union public service')) {
+      return 'https://upsconline.nic.in/upsc/OTRP/index.php';
+    }
+    if (org.contains('railway') || org.contains('rrb') || tit.contains('rrb')) {
+      return 'https://www.rrbapply.gov.in/#/auth/home';
+    }
+    if (org.contains('ibps') || tit.contains('ibps') || org.contains('banking personnel')) {
+      return 'https://ibpsonline.ibps.in';
+    }
+    if (org.contains('sbi') || org.contains('state bank')) {
+      return 'https://bank.sbi/careers/current-openings';
+    }
+    if (org.contains('isro') || tit.contains('isro')) {
+      return 'https://apps.isro.gov.in/icrb/';
+    }
+    if (org.contains('drdo') || tit.contains('drdo')) {
+      return 'https://drdo.gov.in/drdo/ceptam-notice-board';
+    }
+    if (org.contains('kdrb') || org.contains('devaswom')) {
+      return 'https://kdrb.kerala.gov.in/online-application/';
+    }
+
+    return officialNotificationUrl.isNotEmpty ? officialNotificationUrl : 'https://www.ncs.gov.in';
+  }
+
+  factory Job.fromJson(Map<String, dynamic> json) {
+    String parseStringOrList(dynamic val, String defaultVal) {
+      if (val == null) return defaultVal;
+      if (val is List) {
+        return val.map((e) => e.toString()).where((s) => s.isNotEmpty).join(', ');
+      }
+      return val.toString().trim().isEmpty ? defaultVal : val.toString();
+    }
+
+    String parseSalary(dynamic salaryVal, dynamic salaryTextVal) {
+      if (salaryVal is String && salaryVal.trim().isNotEmpty) return salaryVal;
+      if (salaryTextVal is String && salaryTextVal.trim().isNotEmpty) return salaryTextVal;
+      if (salaryVal is Map) {
+        final scale = salaryVal['payScale']?.toString();
+        if (scale != null && scale.trim().isNotEmpty) return scale;
+      }
+      return 'As per Govt Norms';
+    }
+
+    return Job(
+      id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
+      title: json['title']?.toString() ?? json['job']?['title']?.toString() ?? '',
+      organization: json['organization']?.toString() ?? json['job']?['organization']?.toString() ?? 'Kerala Public Service Commission',
+      department: json['department']?.toString() ?? json['job']?['department']?.toString() ?? 'General Administration',
+      jobType: json['jobType']?.toString() ?? json['job']?['jobType']?.toString() ?? 'Kerala PSC',
+      location: json['location']?.toString() ?? json['job']?['location']?.toString() ?? 'Kerala (Statewide)',
+      vacancies: parseStringOrList(json['vacancies'] ?? json['vacancy']?['details'], 'As per notification'),
+      qualification: parseStringOrList(json['qualification'], 'Any Degree'),
+      courseRequirements: parseStringOrList(json['courseRequirements'], ''),
+      ageMin: (json['ageMin'] is num) ? (json['ageMin'] as num).toInt() : 18,
+      ageMax: (json['ageMax'] is num) ? (json['ageMax'] as num).toInt() : 40,
+      category: json['category']?.toString() ?? 'General / OBC / SC-ST',
+      experience: parseStringOrList(json['experience'], 'Fresher eligible'),
+      applicationStartDate: json['applicationStartDate']?.toString() ?? json['job']?['applicationStartDate']?.toString() ?? '',
+      lastDate: json['lastDate']?.toString() ?? json['job']?['applicationLastDate']?.toString() ?? '04-11-2026',
+      applicationFee: json['applicationFee']?.toString() ?? 'Free (Kerala PSC One Time Registration)',
+      selectionProcess: parseStringOrList(json['selectionProcess'], 'Written / OMR Examination'),
+      salary: parseSalary(json['salary'], json['salaryText']),
+      description: json['description']?.toString() ?? '',
+      officialNotificationUrl: json['officialNotificationUrl']?.toString() ?? json['source']?['pdfUrl']?.toString() ?? '',
+      applyUrl: json['applyUrl']?.toString() ?? 'https://thulasi.psc.kerala.gov.in/thulasi/',
+      aiSummary: json['aiSummary'] != null ? AiSummaryData.fromJson(json['aiSummary'] as Map<String, dynamic>?) : null,
+    );
+  }
+
+  Job copyWith({
+    String? id,
+    String? title,
+    String? organization,
+    String? department,
+    String? jobType,
+    String? location,
+    String? vacancies,
+    String? qualification,
+    String? courseRequirements,
+    int? ageMin,
+    int? ageMax,
+    String? category,
+    String? experience,
+    String? applicationStartDate,
+    String? lastDate,
+    String? applicationFee,
+    String? selectionProcess,
+    String? salary,
+    String? description,
+    String? officialNotificationUrl,
+    String? applyUrl,
+    AiSummaryData? aiSummary,
+  }) {
+    return Job(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      organization: organization ?? this.organization,
+      department: department ?? this.department,
+      jobType: jobType ?? this.jobType,
+      location: location ?? this.location,
+      vacancies: vacancies ?? this.vacancies,
+      qualification: qualification ?? this.qualification,
+      courseRequirements: courseRequirements ?? this.courseRequirements,
+      ageMin: ageMin ?? this.ageMin,
+      ageMax: ageMax ?? this.ageMax,
+      category: category ?? this.category,
+      experience: experience ?? this.experience,
+      applicationStartDate: applicationStartDate ?? this.applicationStartDate,
+      lastDate: lastDate ?? this.lastDate,
+      applicationFee: applicationFee ?? this.applicationFee,
+      selectionProcess: selectionProcess ?? this.selectionProcess,
+      salary: salary ?? this.salary,
+      description: description ?? this.description,
+      officialNotificationUrl: officialNotificationUrl ?? this.officialNotificationUrl,
+      applyUrl: applyUrl ?? this.applyUrl,
+      aiSummary: aiSummary ?? this.aiSummary,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'organization': organization,
+      'department': department,
+      'jobType': jobType,
+      'location': location,
+      'vacancies': vacancies,
+      'qualification': qualification,
+      'courseRequirements': courseRequirements,
+      'ageMin': ageMin,
+      'ageMax': ageMax,
+      'category': category,
+      'experience': experience,
+      'applicationStartDate': applicationStartDate,
+      'lastDate': lastDate,
+      'applicationFee': applicationFee,
+      'selectionProcess': selectionProcess,
+      'salary': salary,
+      'description': description,
+      'officialNotificationUrl': officialNotificationUrl,
+      'applyUrl': applyUrl,
+      'aiSummary': aiSummary?.toJson(),
+    };
+  }
 
   /// Evaluates user eligibility against this job using local frontend rules
   EligibilityResult checkEligibility(User? user) {

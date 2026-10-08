@@ -32,9 +32,10 @@ class JobCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               // Top row: Organization & Bookmark
               Row(
@@ -47,7 +48,7 @@ class JobCard extends StatelessWidget {
                         Text(
                           job.organization,
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: theme.colorScheme.primary,
                             letterSpacing: 0.1,
@@ -55,13 +56,13 @@ class JobCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 3),
                         Text(
                           job.title,
                           style: const TextStyle(
-                            fontSize: 17,
+                            fontSize: 15.5,
                             fontWeight: FontWeight.bold,
-                            height: 1.25,
+                            height: 1.2,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -73,6 +74,7 @@ class JobCard extends StatelessWidget {
                     icon: Icon(
                       isSaved ? Icons.bookmark : Icons.bookmark_border,
                       color: isSaved ? theme.colorScheme.primary : Colors.grey,
+                      size: 22,
                     ),
                     onPressed: () {
                       if (onSaveToggle != null) {
@@ -83,17 +85,17 @@ class JobCard extends StatelessWidget {
                     },
                     tooltip: isSaved ? 'Remove from Saved' : 'Save Job',
                     constraints: const BoxConstraints(),
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(2),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
               // Chips / Badges row: Qualification, Location, Vacancies
               Wrap(
-                spacing: 8,
-                runSpacing: 6,
+                spacing: 6,
+                runSpacing: 4,
                 children: [
                   _infoChip(Icons.school_outlined, job.qualification, context),
                   _infoChip(Icons.location_on_outlined, job.location, context),
@@ -101,9 +103,9 @@ class JobCard extends StatelessWidget {
                 ],
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               const Divider(height: 1),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
               // Bottom row: Eligibility Badge, Last Date & Action
               Row(
@@ -115,17 +117,17 @@ class JobCard extends StatelessWidget {
                   ),
                   Row(
                     children: [
-                      const Icon(Icons.schedule, size: 14, color: Colors.grey),
+                      const Icon(Icons.schedule, size: 13, color: Colors.grey),
                       const SizedBox(width: 4),
                       Text(
                         'Ends: ${job.lastDate}',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11.5,
                           color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
                     ],
                   ),
                 ],
@@ -145,7 +147,8 @@ class JobCard extends StatelessWidget {
   Widget _infoChip(IconData icon, String label, BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      constraints: const BoxConstraints(maxWidth: 150),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(6),
@@ -153,13 +156,17 @@ class JobCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: theme.colorScheme.primary),
+          Icon(icon, size: 13, color: theme.colorScheme.primary),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],

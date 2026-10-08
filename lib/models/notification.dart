@@ -40,4 +40,32 @@ class JobNotification {
       isEligible: isEligible ?? this.isEligible,
     );
   }
+
+  factory JobNotification.fromJson(Map<String, dynamic> json) {
+    return JobNotification(
+      id: json['id'] ?? json['_id'] ?? '',
+      jobId: json['jobId'] ?? '',
+      title: json['title'] ?? '',
+      organization: json['organization'] ?? 'Government Notification',
+      message: json['body'] ?? json['message'] ?? '',
+      timestamp: json['createdAt'] != null
+          ? json['createdAt'].toString().replaceFirst('T', ' ').split('.')[0]
+          : (json['timestamp'] ?? 'Today'),
+      isRead: json['isRead'] == true,
+      isEligible: true,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'jobId': jobId,
+      'title': title,
+      'organization': organization,
+      'body': message,
+      'createdAt': timestamp,
+      'isRead': isRead,
+    };
+  }
 }
+

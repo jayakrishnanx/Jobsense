@@ -16,6 +16,6 @@ void main() {
 
     // Verify that LoginScreen is rendered
     expect(find.text('Welcome to JobSense'), findsOneWidget);
-    expect(find.text('Get OTP'), findsOneWidget);
+    expect(find.text('Sign In'), findsOneWidget);
   });
 }
